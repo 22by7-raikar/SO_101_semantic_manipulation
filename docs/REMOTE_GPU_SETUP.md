@@ -193,12 +193,12 @@ Skip cloning if you already have a working copy. Each person's home directory gi
 
 Private repository access and pushes require each contributor's own GitHub authentication and repository permission. The Mac-to-Ubuntu SSH key does not automatically authenticate Ubuntu-to-GitHub. Do not put access tokens in clone URLs or share credentials.
 
-At the time this guide was added, the repository contained a project outline but no pinned Python/CUDA environment or training entry point. Follow the repository's environment instructions when they are added; do not assume another SO-101 project's environment applies here. Create Linux environments on Ubuntu, not by copying macOS virtual environments. Install Python dependencies per user, without `sudo pip`.
+Use the repository's [locked environment setup](ENVIRONMENT.md). On Ubuntu, run `bash scripts/setup.sh robot` in your own clone, then `uv run --no-sync so101-doctor --gpu --hardware`. Create Linux environments on Ubuntu, not by copying macOS virtual environments. Install dependencies per user, without `sudo pip`.
 
 For GPU-enabled PyTorch code, after the project's chosen PyTorch build is installed, check it with:
 
 ```bash
-python -c 'import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CUDA unavailable")'
+uv run --no-sync python -c 'import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CUDA unavailable")'
 ```
 
 A working driver does not guarantee that a particular Python environment has GPU-enabled libraries.

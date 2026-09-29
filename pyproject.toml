@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "so101-semantic-manipulation"
+version = "0.1.0"
+description = "Research foundation for language-grounded SO-101 motion planning"
+requires-python = ">=3.11,<3.12"
+dependencies = [
+  "numpy==2.2.6", "scipy==1.15.3", "matplotlib==3.10.3",
+  "opencv-python-headless==4.11.0.86", "PyYAML==6.0.2",
+  "trimesh==4.6.13", "yourdfpy==0.0.58", "mujoco==3.3.7",
+]
+
+[project.optional-dependencies]
+vision = [
+  "torch==2.7.1", "torchvision==0.22.1", "transformers==4.57.6",
+  "accelerate==1.10.1", "safetensors==0.6.2", "Pillow==11.3.0",
+]
+hardware = [
+  "pyrealsense2==2.56.5.9235; sys_platform == 'linux'",
+  "pyserial==3.5; sys_platform == 'linux'",
+  "lerobot[feetech,smolvla]==0.4.4; sys_platform == 'linux'",
+  "torch==2.7.1; sys_platform == 'linux'",
+  "torchvision==0.22.1; sys_platform == 'linux'",
+  "torchcodec==0.4.0; sys_platform == 'linux'",
+]
+notebooks = ["jupyterlab==4.4.7", "ipykernel==6.30.1"]
+
+[project.scripts]
+so101-doctor = "so101_semantic.doctor:main"
+so101-demo = "so101_semantic.demo:main"
+
+[dependency-groups]
+dev = ["pytest==8.4.2", "ruff==0.12.12"]
+
+[tool.uv]
+required-version = "==0.11.14"
+environments = [
+  "sys_platform == 'linux' and platform_machine == 'x86_64'",
+  "sys_platform == 'darwin' and platform_machine == 'arm64'",
+]
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu118", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cu118", marker = "sys_platform == 'linux'" }]
+
+[[tool.uv.index]]
+name = "pytorch-cu118"
+url = "https://download.pytorch.org/whl/cu118"
+explicit = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/so101_semantic"]

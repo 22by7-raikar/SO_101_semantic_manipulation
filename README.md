@@ -2,6 +2,20 @@
 
 Minimal research repository for language-grounded robotic manipulation with an SO-101 leader–follower arm and a fixed Intel RealSense RGB-D camera.
 
+## Quick start
+
+Install the pinned uv version and host prerequisites from [Environment setup](docs/ENVIRONMENT.md), then choose a profile in your own clone:
+
+```bash
+bash scripts/setup.sh core    # Apple Silicon Mac or Ubuntu: geometry/planning
+# bash scripts/setup.sh vision  # Add PyTorch and vision model interfaces
+# bash scripts/setup.sh robot   # Ubuntu: GPU, RealSense, Feetech and LeRobot
+uv run --no-sync pytest -q
+uv run --no-sync so101-demo
+```
+
+Python 3.11.15 and all resolved dependencies are recorded in `.python-version`, `pyproject.toml` and `uv.lock`. See [Starting the research together](docs/PROJECT_START.md) for the perception/planning interface and first milestones. The demo is synthetic and never moves the robot.
+
 ## Research question
 Do language-conditioned semantic costs improve collision-checked motion planning when object placement and task instructions change?
 

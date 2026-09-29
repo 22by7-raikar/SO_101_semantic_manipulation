@@ -1,0 +1,19 @@
+# Copy to configs/lab.local.yaml (gitignored) and replace measured values.
+# No identity transform or invented robot limits are supplied as calibration.
+camera:
+  serial: null
+  depth_scale_m: null
+  intrinsics: null  # {fx, fy, cx, cy}; from the aligned depth camera model
+calibration:
+  T_base_camera: null  # 4x4: p_base = T_base_camera @ p_camera; metres
+robot:
+  leader_port: null  # Prefer /dev/serial/by-id/... on Ubuntu
+  follower_port: null
+  urdf_path: null  # Pin model source commit and verify joint names/limits
+  joint_names: []
+cost_field:
+  frame: robot_base
+  axis_order: xyz
+  voxel_size_m: 0.01
+execution:
+  enabled: false
