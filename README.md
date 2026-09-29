@@ -28,3 +28,7 @@ Do language-conditioned semantic costs improve collision-checked motion planning
 
 ## First milestone
 Calibrated hardware teleoperation and a verified camera-to-robot transform.
+
+## Remote GPU access
+
+See [Shared Ubuntu GPU laptop setup](docs/REMOTE_GPU_SETUP.md) for two-person SSH access over Tailscale, separate user accounts, persistent sessions, and GPU coordination.
