@@ -1,6 +1,39 @@
-# SO_101_semantic_manipulation
+# Predictive guidance for VLAs on SO-101
 
-Minimal research repository for language-grounded robotic manipulation with an SO-101 leader–follower arm and a fixed Intel RealSense RGB-D camera.
+A fine-tuned SmolVLA policy on an SO-101 arm, steered at inference time to avoid static and moving obstacles it never saw in training. Planning costs built from live RealSense depth are applied as gradients inside the policy's flow-matching sampler, with a CBF-QP safety filter as backup.
+
+**Research question:** can training-free, prediction-aware cost guidance inside a VLA's action sampler cut collisions under distribution shift without hurting task success, and how does it compare to post-hoc filtering?
+
+The full plan, schedule and checklists are in [docs/PLAN.md](docs/PLAN.md) (Oct 12 – Nov 20, 2026).
+
+## Approach
+
+1. **Policy:** SmolVLA (~450M parameters) fine-tuned on about 60 clean-scene teleop demos of one task: pick a block and place it in a bowl.
+2. **Perception:** RealSense depth → arm and target masking → distance field in the robot base frame, plus tracking and forecasting of moving obstacles.
+3. **Guidance:** at each flow step, estimate the final action chunk, compute a cost through forward kinematics (clearance, joint limits, smoothness, forecast occupancy) and push the sampler down its gradient. Guidance never backpropagates through the VLA.
+4. **Safety filter:** a CBF-QP over each chunk enforces joint, velocity and clearance constraints.
+
+| Method | What it is |
+| --- | --- |
+| VLA | Fine-tuned SmolVLA, raw |
+| VLA + QP | Post-hoc CBF-QP filter |
+| VLA + guidance | Cost guidance in the sampler, current-frame obstacles |
+| VLA + predictive guidance | Guidance with forecast occupancy |
+| Full | Predictive guidance + QP |
+
+Evaluated on clean, static-obstacle, moving-obstacle and clutter scenes for success rate, collision rate, minimum clearance, jerk and sampler latency.
+
+## Status
+
+Working now, offline and tested:
+
+- Pinned SO-101 URDF ([third_party/so101](third_party/so101/README.md)) with forward kinematics and LeRobot → URDF joint conversion.
+- Joint position limits (URDF ∩ calibrated range) and servo velocity limits.
+- Collision spheres for every link (5 per link, fitted to the meshes), placed with FK.
+- Read-only follower pose readout (`so101-pose`).
+- Depth back-projection and frame transforms; a synthetic cost-field writer (`so101-demo`).
+
+Not yet built: camera-to-base calibration, distance field, QP filter, the guidance hook, and anything that commands motors.
 
 ## Quick start
 
@@ -14,35 +47,17 @@ uv run --no-sync pytest -q
 uv run --no-sync so101-demo
 ```
 
-Python 3.11.15 and all resolved dependencies are recorded in `.python-version`, `pyproject.toml` and `uv.lock`. See [Starting the research together](docs/PROJECT_START.md) for the perception/planning interface and first milestones. The demo is synthetic and never moves the robot. For connecting and calibrating the arms and camera, see [Hardware bring-up](docs/HARDWARE_SETUP.md).
+Python 3.11.15 and all resolved dependencies are recorded in `.python-version`, `pyproject.toml` and `uv.lock`; LeRobot is pinned to 0.4.4. Always run with `uv run --no-sync`. Nothing in this repository moves the robot yet.
 
-## Research question
-Do language-conditioned semantic costs improve collision-checked motion planning when object placement and task instructions change?
+## Hardware
 
-## Hardware and development context
-- **Robot:** SO-101 leader–follower arm
-- **Perception:** Fixed Intel RealSense RGB-D camera
-- **Primary development machine:** Ubuntu ASUS laptop with RTX 3060 (6 GB)
-- **Collaboration:** Contributors may also edit from macOS
+- **Robot:** SO-101 follower (6× STS3215, 12 V) and leader (5 V) for teleoperation
+- **Cameras:** fixed Intel RealSense D435 (scene RGB + depth) and a USB RGB wrist camera
+- **Compute:** one Ubuntu laptop with an RTX 3060 (6 GB), shared over SSH; SmolVLA is the only GPU consumer at evaluation
 
-## Planned pipeline
-1. Camera calibration and RGB-D perception
-2. Object grounding and 3D geometry
-3. Semantic cost representation
-4. SO-101 kinematics and motion planning
-5. Guarded hardware execution
-6. Reproducible evaluation
+## Documentation
 
-## Proposed comparisons
-- Geometry-only planning
-- Manually labeled semantic costs
-- Language-grounded waypoints
-- ACT baseline
-- SmolVLA baseline
-
-## First milestone
-Calibrated hardware teleoperation and a verified camera-to-robot transform.
-
-## Remote GPU access
-
-See [Shared Ubuntu GPU laptop setup](docs/REMOTE_GPU_SETUP.md) for two-person SSH access over Tailscale, separate user accounts, persistent sessions, and GPU coordination.
+- [Project plan and checklists](docs/PLAN.md)
+- [Environment setup](docs/ENVIRONMENT.md)
+- [Hardware bring-up](docs/HARDWARE_SETUP.md): ports, RealSense firmware, arm calibration, teleoperation, kinematic model check
+- [Shared Ubuntu GPU laptop setup](docs/REMOTE_GPU_SETUP.md): two-person SSH access over Tailscale and GPU coordination
