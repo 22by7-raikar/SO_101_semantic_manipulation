@@ -100,11 +100,10 @@ python -c 'import numpy; print(numpy.__version__)'
 
 Connect camera and motor USB interfaces to Ubuntu, not the Mac. The camera model and firmware must be checked on the actual device. Use a USB 3 data cable.
 
-An administrator can grant serial access to the two real usernames:
+An administrator can grant serial access to each contributor's Linux username (check with `whoami`):
 
 ```bash
-sudo usermod -aG dialout akshay
-sudo usermod -aG dialout teammate
+sudo usermod -aG dialout <username>
 ```
 
 Both users must log out and reconnect afterward. Verify with `id` and inspect stable port names with `ls -l /dev/serial/by-id/`. Avoid global `chmod 777` device permissions and do not run robot processes as root.
@@ -121,7 +120,7 @@ sudo udevadm trigger
 
 Review any existing rules before replacing them. Reconnect the camera and run the camera diagnostic again. If streaming still fails, check SDK/firmware/kernel compatibility using the official RealSense instructions; a Python wheel alone does not verify device compatibility.
 
-Use the [LeRobot 0.4.4 SO-101 instructions](https://huggingface.co/docs/lerobot/v0.4.4/so101) for motor setup and calibration. CLI tools are installed in `.venv/bin`; for example, `uv run --no-sync lerobot-find-port`. That tool is interactive and may ask you to disconnect/reconnect a cable. Do not run hardware setup while another person controls the robot.
+Use the [LeRobot 0.4.4 SO-101 instructions](https://huggingface.co/docs/lerobot/v0.4.4/so101) for motor setup and calibration, and [Hardware bring-up](HARDWARE_SETUP.md) for this lab's tested sequence, calibration pitfalls and firmware update. CLI tools are installed in `.venv/bin`; for example, `uv run --no-sync lerobot-find-port`. That tool is interactive and may ask you to disconnect/reconnect a cable. Do not run hardware setup while another person controls the robot.
 
 LeRobot keyboard-driven teleoperation may require a local graphical session; SSH is not a substitute for local operator input. If a headless process fails importing `pynput`, use the appropriate local desktop session or a deliberately designed headless control path. Do not fake a display merely to bypass an operator-input requirement.
 
@@ -152,7 +151,7 @@ Open the authenticated localhost URL printed by Jupyter. Use separate ports when
 
 ## 6. Scope and project choices
 
-Start with saved RGB-D frames, measured calibration and geometry-only planning. The core includes SciPy optimization, URDF loading via yourdfpy and MuJoCo for simulation work. A robot model is not bundled: agree on a licensed SO-101 model, pin its source commit, verify joint order/limits/meshes and compare FK with the real arm before planning motion.
+Start with saved RGB-D frames, measured calibration and geometry-only planning. The core includes SciPy optimization, URDF loading via yourdfpy and MuJoCo for simulation work. The SO-101 follower URDF is vendored at a pinned upstream commit in `third_party/so101/` (meshes fetched separately); verify joint directions and FK against the real arm as described in [Hardware bring-up](HARDWARE_SETUP.md#5-kinematic-model-check) before planning motion.
 
 Transformers supplies model interfaces for Grounding DINO, SAM 2, SigLIP and DINOv2. Choose and pin a model ID and full revision commit when implementing the first perception module. Downloads may require a model license or account. No checkpoint is silently chosen or downloaded here.
 

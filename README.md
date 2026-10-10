@@ -14,7 +14,7 @@ uv run --no-sync pytest -q
 uv run --no-sync so101-demo
 ```
 
-Python 3.11.15 and all resolved dependencies are recorded in `.python-version`, `pyproject.toml` and `uv.lock`. See [Starting the research together](docs/PROJECT_START.md) for the perception/planning interface and first milestones. The demo is synthetic and never moves the robot.
+Python 3.11.15 and all resolved dependencies are recorded in `.python-version`, `pyproject.toml` and `uv.lock`. See [Starting the research together](docs/PROJECT_START.md) for the perception/planning interface and first milestones. The demo is synthetic and never moves the robot. For connecting and calibrating the arms and camera, see [Hardware bring-up](docs/HARDWARE_SETUP.md).
 
 ## Research question
 Do language-conditioned semantic costs improve collision-checked motion planning when object placement and task instructions change?
