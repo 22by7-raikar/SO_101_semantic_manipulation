@@ -9,8 +9,9 @@ calibration:
 robot:
   leader_port: null  # Prefer /dev/serial/by-id/... on Ubuntu
   follower_port: null
-  urdf_path: null  # Pin model source commit and verify joint names/limits
-  joint_names: []
+  # Vendored at a pinned commit; set only after the FK check in docs/HARDWARE_SETUP.md
+  urdf_path: null  # third_party/so101/so101_new_calib.urdf
+  joint_names: [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
 cost_field:
   frame: robot_base
   axis_order: xyz

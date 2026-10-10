@@ -31,6 +31,7 @@ notebooks = ["jupyterlab==4.4.7", "ipykernel==6.30.1"]
 [project.scripts]
 so101-doctor = "so101_semantic.doctor:main"
 so101-demo = "so101_semantic.demo:main"
+so101-pose = "so101_semantic.pose:main"
 
 [dependency-groups]
 dev = ["pytest==8.4.2", "ruff==0.12.12"]

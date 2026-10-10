@@ -19,3 +19,4 @@ calibration/local/
 *.safetensors
 
 configs/*.local.yaml
+third_party/so101/assets/
