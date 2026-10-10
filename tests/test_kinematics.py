@@ -1,7 +1,19 @@
+import json
+
 import numpy as np
 import pytest
 
-from so101_semantic.kinematics import JOINT_NAMES, URDF_PATH, SO101Model, lerobot_to_urdf
+from so101_semantic.kinematics import (
+    JOINT_NAMES,
+    SERVO_NO_LOAD_SPEED_RAD_S,
+    URDF_PATH,
+    SO101Model,
+    calibrated_range_rad,
+    clip_to_limits,
+    lerobot_to_urdf,
+    limit_violations,
+    min_segment_duration,
+)
 
 
 @pytest.fixture(scope="module")
@@ -48,3 +60,65 @@ def test_gripper_maps_onto_jaw_limits(model):
 def test_missing_joint_rejected():
     with pytest.raises(KeyError):
         lerobot_to_urdf({"shoulder_pan": 0.0}, (0.0, 1.0))
+
+
+def calibration_file(tmp_path, half_ticks):
+    entries = {
+        name: {
+            "id": i,
+            "drive_mode": 0,
+            "homing_offset": 0,
+            "range_min": 2048 - half_ticks,
+            "range_max": 2048 + half_ticks,
+        }
+        for i, name in enumerate(JOINT_NAMES, start=1)
+    }
+    path = tmp_path / "follower.json"
+    path.write_text(json.dumps(entries))
+    return path
+
+
+def test_calibrated_range_matches_lerobot_degrees():
+    lower, upper = calibrated_range_rad({"range_min": 1024, "range_max": 3071})
+    assert upper == pytest.approx(-lower)
+    assert np.rad2deg(upper) == pytest.approx(1023.5 * 360 / 4095)
+
+
+def test_joint_limits_without_calibration_use_urdf_positions_and_servo_speed(model):
+    limits = model.joint_limits()
+    for name in JOINT_NAMES:
+        assert (limits[name].lower, limits[name].upper) == model.limits(name)
+        # The URDF's velocity="10" placeholder must not leak through.
+        assert limits[name].velocity == pytest.approx(SERVO_NO_LOAD_SPEED_RAD_S)
+    assert SERVO_NO_LOAD_SPEED_RAD_S == pytest.approx(4.717, abs=1e-3)
+
+
+def test_joint_limits_intersect_calibration(model, tmp_path):
+    narrow = model.joint_limits(calibration_file(tmp_path, half_ticks=512))  # +-45 deg
+    for name in JOINT_NAMES[:-1]:
+        assert narrow[name].upper == pytest.approx(np.deg2rad(512 * 360 / 4095))
+        assert narrow[name].lower == pytest.approx(-narrow[name].upper)
+    assert (narrow["gripper"].lower, narrow["gripper"].upper) == model.limits("gripper")
+
+    wide = model.joint_limits(calibration_file(tmp_path, half_ticks=2047))  # full turn
+    for name in JOINT_NAMES:
+        assert (wide[name].lower, wide[name].upper) == model.limits(name)
+
+
+def test_limit_violations_and_clip(model):
+    limits = model.joint_limits()
+    lower, upper = model.limits("elbow_flex")
+    q = {**dict.fromkeys(JOINT_NAMES, 0.0), "elbow_flex": upper + 0.1, "wrist_flex": -10.0}
+    excess = limit_violations(q, limits)
+    assert set(excess) == {"elbow_flex", "wrist_flex"}
+    assert excess["elbow_flex"] == pytest.approx(0.1)
+    assert excess["wrist_flex"] < 0
+    assert limit_violations(clip_to_limits(q, limits), limits) == {}
+    assert limit_violations(dict.fromkeys(JOINT_NAMES, 0.0), limits) == {}
+
+
+def test_min_segment_duration_set_by_slowest_joint(model):
+    limits = model.joint_limits()
+    q0 = dict.fromkeys(JOINT_NAMES, 0.0)
+    q1 = {**q0, "shoulder_pan": 1.0, "elbow_flex": -0.5}
+    assert min_segment_duration(q0, q1, limits) == pytest.approx(1.0 / SERVO_NO_LOAD_SPEED_RAD_S)

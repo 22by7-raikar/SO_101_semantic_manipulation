@@ -4,8 +4,13 @@ LeRobot reports arm joints in degrees with 0 at the middle of each calibrated ra
 the URDF's zero convention. Joint directions are assumed to agree (sign +1) until checked on
 the real arm; record any reversed joint in ``JOINT_SIGNS``. The gripper is reported 0-100 by
 LeRobot and mapped linearly onto the URDF jaw limits, which is provisional.
+
+Velocity and effort come from the servo datasheet, not the URDF, whose ``velocity="10"
+effort="10"`` on every joint are upstream placeholders.
 """
 
+import json
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +21,30 @@ ARM_JOINTS = ("shoulder_pan", "shoulder_lift", "elbow_flex", "wrist_flex", "wris
 JOINT_NAMES = (*ARM_JOINTS, "gripper")
 JOINT_SIGNS = dict.fromkeys(ARM_JOINTS, 1.0)
 TOOL_FRAME = "gripper_frame_link"
+
+# Feetech STS3215-C018 (12 V) datasheet: 0.222 s/60 deg no load, 30 kg*cm stall. These are
+# physical ceilings, not safe planning values; the servo variant on our arm is unconfirmed.
+STS3215_TICKS = 4096
+SERVO_NO_LOAD_SPEED_RAD_S = float(np.deg2rad(60.0) / 0.222)
+SERVO_STALL_TORQUE_NM = 30.0 * 0.0980665
+
+
+@dataclass(frozen=True)
+class JointLimit:
+    lower: float  # rad
+    upper: float  # rad
+    velocity: float  # rad/s
+    effort: float  # N*m
+
+
+def calibrated_range_rad(entry: dict) -> tuple[float, float]:
+    """Joint range in URDF radians from one LeRobot calibration entry (degrees mode).
+
+    LeRobot reports ``(raw - mid) * 360 / (ticks - 1)`` with ``mid`` the range centre, so the
+    range is symmetric about zero and independent of drive direction.
+    """
+    half = (entry["range_max"] - entry["range_min"]) / 2 * 2 * np.pi / (STS3215_TICKS - 1)
+    return -half, half
 
 
 def lerobot_to_urdf(
@@ -51,6 +80,23 @@ class SO101Model:
         limit = self.urdf.joint_map[joint].limit
         return float(limit.lower), float(limit.upper)
 
+    def joint_limits(self, calibration_path: Path | None = None) -> dict[str, JointLimit]:
+        """Per-joint limits; arm positions are the intersection of URDF and calibrated ranges.
+
+        The gripper keeps the URDF range because LeRobot maps its calibrated range onto it.
+        """
+        calibration = json.loads(calibration_path.read_text()) if calibration_path else {}
+        limits = {}
+        for name in JOINT_NAMES:
+            lower, upper = self.limits(name)
+            if name in ARM_JOINTS and name in calibration:
+                cal_lower, cal_upper = calibrated_range_rad(calibration[name])
+                lower, upper = max(lower, cal_lower), min(upper, cal_upper)
+            limits[name] = JointLimit(
+                lower, upper, SERVO_NO_LOAD_SPEED_RAD_S, SERVO_STALL_TORQUE_NM
+            )
+        return limits
+
     def fk(self, q: dict[str, float], frame: str = TOOL_FRAME) -> NDArray:
         """Return T_base_frame (4x4, metres) for URDF joint radians ``q``."""
         self.urdf.update_cfg({name: float(q[name]) for name in JOINT_NAMES})
@@ -58,3 +104,25 @@ class SO101Model:
 
     def fk_lerobot(self, positions: dict[str, float], frame: str = TOOL_FRAME) -> NDArray:
         return self.fk(lerobot_to_urdf(positions, self.limits("gripper")), frame)
+
+
+def limit_violations(q: dict[str, float], limits: dict[str, JointLimit]) -> dict[str, float]:
+    """Joints outside their position limits, mapped to the signed excess in radians."""
+    excess = {}
+    for name, limit in limits.items():
+        if q[name] < limit.lower:
+            excess[name] = q[name] - limit.lower
+        elif q[name] > limit.upper:
+            excess[name] = q[name] - limit.upper
+    return excess
+
+
+def clip_to_limits(q: dict[str, float], limits: dict[str, JointLimit]) -> dict[str, float]:
+    return {name: float(np.clip(q[name], lim.lower, lim.upper)) for name, lim in limits.items()}
+
+
+def min_segment_duration(
+    q0: dict[str, float], q1: dict[str, float], limits: dict[str, JointLimit]
+) -> float:
+    """Shortest time (s) for a straight joint-space move that respects every velocity limit."""
+    return max(abs(q1[name] - q0[name]) / lim.velocity for name, lim in limits.items())
