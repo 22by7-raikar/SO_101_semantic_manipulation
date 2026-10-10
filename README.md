@@ -29,7 +29,7 @@ Working now, offline and tested:
 
 - Pinned SO-101 URDF ([third_party/so101](third_party/so101/README.md)) with forward kinematics and LeRobot → URDF joint conversion.
 - Joint position limits (URDF ∩ calibrated range) and servo velocity limits.
-- Collision spheres for every link (5 per link, fitted to the meshes), placed with FK.
+- Collision spheres for every link (5 per link, fitted to the meshes), placed with FK, with self-collision checks.
 - Read-only follower pose readout (`so101-pose`).
 - Depth back-projection and frame transforms; a synthetic cost-field writer (`so101-demo`).
 

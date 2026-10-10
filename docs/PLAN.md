@@ -143,6 +143,7 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Joint limits in `kinematics.py`; servo datasheet maximum velocity (4.7 rad/s) as the hard limit
 - [ ] Planning velocity limit per joint: 99th-percentile speed from teleop logs (the speeds the policy saw in demos)
 - [x] Fit 5 collision spheres per link (`configs/so101_collision_spheres.yaml`, `scripts/fit_collision_spheres.py`): every mesh surface point covered with ≥ 0.76 mm to spare; spheres claim ~5–13 mm (mean) beyond each link
+- [x] Self-collision checks on the spheres: adjacent pairs skipped, 3 pairs proven unable to touch skipped, 12 pairs checked; never misses a mesh contact
 - [ ] View the spheres in meshcat over the mesh
 
 **Camera-to-base calibration (MP)**

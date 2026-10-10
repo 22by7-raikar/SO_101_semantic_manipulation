@@ -83,3 +83,23 @@ links:
     radius: 0.0194
   - center: [-0.0066, -0.0712, 0.0176]
     radius: 0.0133
+self_collision:
+  ignore:
+  - links: [base_link, shoulder_link]
+    reason: adjacent
+  - links: [base_link, upper_arm_link]
+    reason: meshes stay >= 9.3 mm apart over full shoulder_lift x shoulder_pan
+  - links: [shoulder_link, upper_arm_link]
+    reason: adjacent
+  - links: [upper_arm_link, lower_arm_link]
+    reason: adjacent
+  - links: [lower_arm_link, wrist_link]
+    reason: adjacent
+  - links: [lower_arm_link, gripper_link]
+    reason: meshes stay >= 10.0 mm apart over full wrist_roll x wrist_flex
+  - links: [wrist_link, gripper_link]
+    reason: adjacent
+  - links: [wrist_link, moving_jaw_so101_v1_link]
+    reason: meshes stay >= 2.5 mm apart over full gripper x wrist_roll
+  - links: [gripper_link, moving_jaw_so101_v1_link]
+    reason: adjacent

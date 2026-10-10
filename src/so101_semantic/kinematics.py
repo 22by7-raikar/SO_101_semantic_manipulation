@@ -122,6 +122,32 @@ class SO101Model:
             links += [link] * len(r)
         return np.vstack(centres), np.concatenate(radii), links
 
+    def self_collision_distances(self, q: dict[str, float]) -> dict[tuple[str, str], float]:
+        """Signed sphere distance (m) for each checked link pair; negative means overlapping.
+
+        Pairs that are adjacent or proven unable to touch are skipped (see the spheres config).
+        Spheres overestimate the links, so this is conservative: a negative value can be a
+        near miss, but a real contact always gives a negative value.
+        """
+        from so101_semantic.collision import load_ignored_pairs, load_spheres, self_collision_pairs
+
+        if not hasattr(self, "_self_collision"):
+            spheres = load_spheres()
+            self._self_collision = (spheres, self_collision_pairs(spheres, load_ignored_pairs()))
+        spheres, pairs = self._self_collision
+        centres, radii, links = self.collision_spheres(q, spheres)
+        links = np.array(links)
+        distances = {}
+        for a, b in pairs:
+            ia, ib = links == a, links == b
+            gap = np.linalg.norm(centres[ia][:, None] - centres[ib][None], axis=2)
+            distances[(a, b)] = float((gap - radii[ia][:, None] - radii[ib][None]).min())
+        return distances
+
+    def self_collisions(self, q: dict[str, float], margin: float = 0.0) -> list[tuple[str, str]]:
+        """Checked link pairs whose spheres are closer than ``margin`` (m) at ``q``."""
+        return [pair for pair, d in self.self_collision_distances(q).items() if d < margin]
+
 
 def limit_violations(q: dict[str, float], limits: dict[str, JointLimit]) -> dict[str, float]:
     """Joints outside their position limits, mapped to the signed excess in radians."""
