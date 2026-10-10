@@ -106,6 +106,22 @@ class SO101Model:
     def fk_lerobot(self, positions: dict[str, float], frame: str = TOOL_FRAME) -> NDArray:
         return self.fk(lerobot_to_urdf(positions, self.limits("gripper")), frame)
 
+    def collision_spheres(
+        self, q: dict[str, float], spheres: dict[str, tuple[NDArray, NDArray]] | None = None
+    ) -> tuple[NDArray, NDArray, list[str]]:
+        """Sphere centres [n, 3] in the base frame, radii [n] and each sphere's link, at ``q``."""
+        from so101_semantic.collision import load_spheres
+
+        spheres = load_spheres() if spheres is None else spheres
+        self.urdf.update_cfg({name: float(q[name]) for name in JOINT_NAMES})
+        centres, radii, links = [], [], []
+        for link, (local, r) in spheres.items():
+            t = np.array(self.urdf.get_transform(link, self.base_frame))
+            centres.append(local @ t[:3, :3].T + t[:3, 3])
+            radii.append(r)
+            links += [link] * len(r)
+        return np.vstack(centres), np.concatenate(radii), links
+
 
 def limit_violations(q: dict[str, float], limits: dict[str, JointLimit]) -> dict[str, float]:
     """Joints outside their position limits, mapped to the signed excess in radians."""
