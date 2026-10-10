@@ -23,7 +23,8 @@ JOINT_SIGNS = dict.fromkeys(ARM_JOINTS, 1.0)
 TOOL_FRAME = "gripper_frame_link"
 
 # Feetech STS3215-C018 (12 V) datasheet: 0.222 s/60 deg no load, 30 kg*cm stall. These are
-# physical ceilings, not safe planning values; the servo variant on our arm is unconfirmed.
+# physical ceilings, not safe planning values. Our follower servos read 11.8-11.9 V with a 14.0 V
+# Max_Voltage_Limit (7.4 V variants ship with 8.0 V), consistent with C018; labels not checked.
 STS3215_TICKS = 4096
 SERVO_NO_LOAD_SPEED_RAD_S = float(np.deg2rad(60.0) / 0.222)
 SERVO_STALL_TORQUE_NM = 30.0 * 0.0980665
