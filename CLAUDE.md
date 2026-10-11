@@ -41,7 +41,7 @@ Two-person, 6-week project (Oct 12 – Nov 20, 2026) on an SO-101 leader–follo
 - `src/so101_semantic/demo.py` — synthetic cost-field writer (no devices). `so101-demo`.
 - `src/so101_semantic/doctor.py` — read-only environment diagnostics. `so101-doctor [--vision --gpu --hardware --camera]`.
 - `third_party/so101/` — `so101_new_calib.urdf` copied unmodified from TheRobotStudio/SO-ARM100 at a pinned commit (SHA-256 and Apache-2.0 license alongside). Meshes (~16 MB) are gitignored under `assets/`; fetch and checksum them with `scripts/fetch_so101_meshes.py`. Never edit the vendored URDF; keep overrides in our code or config.
-- `scripts/` — `setup.sh core|vision|robot` (environment install), `fetch_so101_meshes.py`, `fit_collision_spheres.py`, `realsense_fw_update.py` (dry run by default; `--flash` burns firmware).
+- `scripts/` — `setup.sh core|vision|robot` (environment install), `fetch_so101_meshes.py`, `fit_collision_spheres.py`, `stream_cameras.py` (live Rerun view of `scene`/`wrist` from `lab.local.yaml`; read-only), `realsense_fw_update.py` (dry run by default; `--flash` burns firmware).
 - `docs/` — `PLAN.md` (plan + checklists), `HARDWARE_SETUP.md` (ports, udev, RealSense firmware, arm calibration, teleop, kinematic model check), `ENVIRONMENT.md`, `REMOTE_GPU_SETUP.md`.
 - `configs/lab.example.yaml` → copy to `configs/lab.local.yaml` (gitignored) with measured intrinsics, `T_base_camera`, ports, URDF path. Null means "not measured yet"; never fill with guesses.
 - `tests/` — pytest, must run without hardware.

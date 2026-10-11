@@ -97,6 +97,13 @@ Add the cameras and Rerun display once the arms track (`wrist` and `scene`, as n
 
 Only one process can open each camera: stop any other viewer or stream first.
 
+To look at the cameras without teleoperating (e.g. when mounting or placing them):
+
+```bash
+uv run --no-sync python scripts/stream_cameras.py                   # scene + wrist
+uv run --no-sync python scripts/stream_cameras.py --cameras wrist --guides
+```
+
 ## 5. Kinematic model check
 
 `third_party/so101/so101_new_calib.urdf` is pinned upstream (see its README). LeRobot's degree
