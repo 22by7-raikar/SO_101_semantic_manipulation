@@ -1,11 +1,24 @@
 # Copy to configs/lab.local.yaml (gitignored) and replace measured values.
 # No identity transform or invented robot limits are supplied as calibration.
-camera:
-  serial: null
-  depth_scale_m: null
-  intrinsics: null  # {fx, fy, cx, cy}; from the aligned depth camera model
+cameras:
+  scene:  # Fixed RealSense: policy scene image + depth for the distance field
+    type: intelrealsense
+    serial: null  # rs camera_info.serial_number, not the USB descriptor serial
+    depth_scale_m: null
+    color: {width: 640, height: 480, fps: 30}  # policy input; identical for demos and evaluation
+    depth: {width: 848, height: 480, fps: 30, emitter: true, spatial_filter: true, temporal_filter: static_scenes_only, hole_filling: false}
+    color_intrinsics: null  # {width, height, fx, fy, cx, cy}; read from the device
+    depth_intrinsics: null
+    T_color_depth: null  # 4x4 factory extrinsics: p_color = T_color_depth @ p_depth
+  wrist:  # USB camera on the gripper; policy input only
+    type: opencv
+    path: null  # /dev/v4l/by-id/... (stable across replugs)
+    width: 640
+    height: 480
+    fps: 30
+    fourcc: MJPG
 calibration:
-  T_base_camera: null  # 4x4: p_base = T_base_camera @ p_camera; metres
+  T_base_camera: null  # 4x4: p_base = T_base_camera @ p_camera (scene colour frame); metres
 robot:
   leader_port: null  # Prefer /dev/serial/by-id/... on Ubuntu
   follower_port: null

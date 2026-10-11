@@ -14,7 +14,8 @@ Two-person, 6-week project (Oct 12 – Nov 20, 2026) on an SO-101 leader–follo
 
 ## Hardware and compute
 
-- SO-101 follower + leader (6 joints incl. gripper); fixed Intel RealSense (scene RGB + depth); Seeed USB RGB camera on the wrist.
+- SO-101 follower + leader (6 joints incl. gripper); fixed Intel RealSense D435 (`scene`: RGB + depth); icSpring USB RGB camera on the gripper (`wrist`). Device ids, stream settings, factory intrinsics and depth-to-colour extrinsics are under `cameras:` in `configs/lab.local.yaml`.
+- Camera settings: policy colour 640×480 @ 30 fps for both cameras, identical in demos and evaluation (SmolVLA resizes to 512×512). Distance-field depth 848×480 @ 30 fps, emitter on, spatial filter; temporal filter only for static scenes (it smears moving obstacles); no hole filling. Only one process can open a camera, so at evaluation our pipeline owns the RealSense and serves both. The wrist camera is policy input only and needs no geometric calibration.
 - Follower: 6× Feetech STS3215 on a 12 V supply. All six read 11.8–11.9 V with a 14.0 V `Max_Voltage_Limit`, consistent with the 12 V C018 variant (30 kg·cm stall, 0.222 s/60° ≈ 4.7 rad/s no load); labels not checked. LeRobot caps the gripper at `Max_Torque_Limit` 500 (50%).
 - Leader: STS3215s on a 5 V supply with mixed gearing (shoulder_lift reads an 8.0 V limit, the 7.4 V 1/345 part; the other five read 12.0 V). The leader is only read, never commanded.
 - **Only GPU: RTX 3060 Laptop, 6 GB** (ASUS Zephyrus G14 GA401QM, Ubuntu). No cloud budget; Kaggle/Colab free GPUs are the fallback for training only.

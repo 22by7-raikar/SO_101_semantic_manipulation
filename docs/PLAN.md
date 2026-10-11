@@ -130,8 +130,11 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Ports via `uv run --no-sync lerobot-find-port`; user in `dialout`; `/dev/serial/by-id/...` recorded in `configs/lab.local.yaml`
 - [x] Calibrate follower and leader with `lerobot-calibrate`
 - [x] Teleoperate 5 minutes with `lerobot-teleoperate`; note any servo running hot or jittering
-- [ ] Identify cameras (`lerobot-find-cameras`); name them `wrist` and `scene`
-- [ ] Stream aligned colour + depth at 640×480; save intrinsics and depth scale to `lab.local.yaml`
+- [x] Identify cameras; named `scene` (RealSense D435) and `wrist` (icSpring USB, by-id path) in `lab.local.yaml`
+- [x] Stream aligned colour + depth; save intrinsics (colour 640×480, depth 848×480), depth-to-colour extrinsics and depth scale to `lab.local.yaml`
+- [x] Mount the wrist camera: jaws in the lower third, open gap centred
+- [ ] Wrist camera: full wrist roll/flex under teleop with no mount shift or cable pull; tighten and mark its position
+- [ ] Scene camera placement before Week 2 recording: ~0.6–0.8 m from the workspace (now ~1.3 m), all 12 block and 4 bowl spots in view; clamp and mark it
 - [ ] Time a short SmolVLA fine-tune (~1k steps) on the laptop to size the Week 2 run
 - [ ] (CV) Generate the episode schedule and record the first ~20 demos by Friday
 
@@ -177,6 +180,7 @@ Done when: the QP keeps replayed chunks clear of a test obstacle, and the Clean 
 
 **Robot loop (MP)**
 - [ ] observation → policy → optional filter → `send_action`, opt-in via config
+- [ ] One process owns the RealSense at evaluation: 640×480 colour to the policy (same settings as LeRobot recording), 848×480 filtered depth to the distance field
 - [ ] Software workspace box + keyboard e-stop that holds position
 
 **Baseline (Both)**

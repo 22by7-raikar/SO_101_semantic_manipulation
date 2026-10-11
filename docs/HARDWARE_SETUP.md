@@ -87,12 +87,15 @@ uv run --no-sync lerobot-teleoperate \
   --teleop.type=so101_leader --teleop.id=leader --teleop.port=<leader by-id>
 ```
 
-Add the camera and Rerun display once the arms track:
+Add the cameras and Rerun display once the arms track (`wrist` and `scene`, as named in
+`lab.local.yaml`; both at the 640×480, 30 fps the policy uses):
 
 ```bash
-  --robot.cameras="{ front: {type: intelrealsense, serial_number_or_name: '<camera serial>', width: 640, height: 480, fps: 30}}" \
+  --robot.cameras="{ wrist: {type: opencv, index_or_path: '<wrist /dev/v4l/by-id path>', width: 640, height: 480, fps: 30, fourcc: 'MJPG'}, scene: {type: intelrealsense, serial_number_or_name: '<camera serial>', width: 640, height: 480, fps: 30}}" \
   --display_data=true
 ```
+
+Only one process can open each camera: stop any other viewer or stream first.
 
 ## 5. Kinematic model check
 
