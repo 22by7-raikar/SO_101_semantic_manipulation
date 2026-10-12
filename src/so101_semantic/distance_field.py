@@ -215,8 +215,8 @@ def clearance_jacobian(
     """Per-sphere clearance [n], d clearance / d q [n, len(JOINT_NAMES)] (per radian) and links.
 
     Chain rule: field gradient at each centre times the centre's motion per joint (central
-    differences of FK). For a linearised CBF on clearance; the field gradient is piecewise
-    constant within a voxel.
+    differences of FK). For a linearised CBF on clearance; the field gradient is continuous
+    inside a voxel and jumps across voxel faces.
     """
     env = _env_spheres(spheres, exclude)
     centres, radii, links = model.collision_spheres(q, env)

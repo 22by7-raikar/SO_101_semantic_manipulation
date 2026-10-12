@@ -177,7 +177,9 @@ Done when: the QP keeps replayed chunks clear of a test obstacle, and the Clean 
 - [x] `clearance(q)`: FK spheres → min(distance − radius), `base_link` excluded; per-sphere Jacobian for the CBF
 
 **CBF-QP filter (MP)**
-- [ ] Formulation on paper: variables = chunk joint positions; objective = track VLA chunk + smoothness; constraints = joint and velocity limits, linearised discrete-time CBF on clearance
+- [x] Formulation: `docs/QP_FILTER.md` (tool-metric tracking + deviation smoothness; joint/velocity limits; linearised discrete-time CBF on a between-tick segment barrier for field clearance and the table; sequential QP with an exact check and fallback; always feasible)
+- [x] SmolVLA chunk latency on the 3060 as LeRobot loads it (bf16): 213–236 ms median at batch 1, p95 ≤ 301 ms (prefix 57 ms + ~18 ms per flow step); batch 8 650 ms → filter budget ≤ 25 ms p95 (`scripts/time_smolvla_inference.py`)
+- [ ] Before coding: servo off-path tracking error on our follower (proxy p99 4.3°), demo speed limits, jaw spheres vs table at our demo grasps
 - [ ] Prototype in cvxpy, then OSQP (add both with locked pins)
 - [ ] Offline test on recorded chunks with a synthetic obstacle; plot clearance before/after
 - [ ] Time it (ms per chunk)
