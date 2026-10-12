@@ -117,3 +117,20 @@ camera calibration or planning:
 3. In two or three poses, measure the gripper tip from the base with a ruler and compare.
 4. Record any reversed joint in `JOINT_SIGNS` in `src/so101_semantic/kinematics.py`, with the
    evidence, and only then set `robot.urdf_path` as verified in `lab.local.yaml`.
+
+### Joint offsets and FK check from touch points
+
+Needs one sheet of printer paper, folded in half both ways and taped flat in front of the arm
+(long edge across the front, near edge ~3-5 cm from the base). Its corners, edge midpoints and
+centre are nine marks known to about 1 mm. With teleop stopped (torque off) and the gripper
+closed, rest the point of the fixed jaw on marks by hand and record each touch:
+
+```bash
+uv run --no-sync python scripts/record_touch_points.py --paper letter   # or a4
+uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json
+```
+
+Record 12-18 touches: every reachable mark, several again with the wrist rolled or the arm bent
+differently. The fit reports the current model's error, the best joint directions, per-joint zero
+offsets (degrees added to LeRobot readings) and the per-touch residual, which is the FK check
+(target < 10 mm). Offsets are specific to the current arm calibration: redo after recalibrating.
