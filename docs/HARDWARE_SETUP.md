@@ -120,6 +120,8 @@ camera calibration or planning:
 
 ### Joint offsets and FK check from touch points
 
+Short checklist version: [CALIBRATION_STEPS.md](CALIBRATION_STEPS.md).
+
 Print the calibration sheet (`uv run --no-sync python scripts/make_calib_sheet.py` →
 `outputs/calib_sheet_a4.pdf`) at 100% on A4; check its 100 mm bar. Tape it flat in front of the
 arm, N row toward the base, near edge ~3-5 cm from it. (Fallback without a printer: a plain sheet
