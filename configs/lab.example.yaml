@@ -29,5 +29,9 @@ cost_field:
   frame: robot_base
   axis_order: xyz
   voxel_size_m: 0.01
+  # Distance-field box, base frame (m); set once table z is known (touch fit). The arm must
+  # stay inside it: queries outside clamp to the boundary.
+  box_min_m: null
+  box_max_m: null
 execution:
   enabled: false

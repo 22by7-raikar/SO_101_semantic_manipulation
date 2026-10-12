@@ -167,12 +167,12 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 Done when: the QP keeps replayed chunks clear of a test obstacle, and the Clean baseline has 20 logged trials (Gate 1). CV records the remaining ~40 demos and fine-tunes SmolVLA this week.
 
 **Distance field (MP)**
-- [ ] Interface with teammate: masked cloud in base frame, N×3 numpy + timestamp
-- [ ] Workspace box, 1 cm voxels (`cost_field.voxel_size_m`)
-- [ ] `scipy.ndimage.distance_transform_edt` on occupancy
-- [ ] Torch trilinear query (`grid_sample`) → differentiable distance + gradient
-- [ ] Test with a box at known points (1–2 cm)
-- [ ] `clearance(q)`: FK spheres → min(distance − radius)
+- [ ] Interface with teammate: masked cloud in base frame, N×3 numpy + timestamp (`DistanceField.from_points(..., stamp=)` takes it; agree with CV that arm, target and table are removed)
+- [ ] Workspace box, 1 cm voxels (`cost_field.voxel_size_m`); code done, `cost_field.box_min_m/box_max_m` wait for table z from the touch fit
+- [x] `scipy.ndimage.distance_transform_edt` on occupancy (signed; `distance_field.py`; build 20–60 ms on CPU)
+- [x] Torch trilinear query (`grid_sample`) → differentiable distance + gradient (matches the numpy query; 0.5 ms for 1,750 points with gradient)
+- [x] Test with a box at known points (1–2 cm): 0–3 mm closer than true, never further (synthetic cloud; redo with a real box once T_base_camera exists)
+- [x] `clearance(q)`: FK spheres → min(distance − radius), `base_link` excluded; per-sphere Jacobian for the CBF
 
 **CBF-QP filter (MP)**
 - [ ] Formulation on paper: variables = chunk joint positions; objective = track VLA chunk + smoothness; constraints = joint and velocity limits, linearised discrete-time CBF on clearance
