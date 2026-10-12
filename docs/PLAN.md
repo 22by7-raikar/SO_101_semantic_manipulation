@@ -133,7 +133,7 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Identify cameras; named `scene` (RealSense D435) and `wrist` (icSpring USB, by-id path) in `lab.local.yaml`
 - [x] Stream aligned colour + depth; save intrinsics (colour 640×480, depth 848×480), depth-to-colour extrinsics and depth scale to `lab.local.yaml`
 - [x] Mount the wrist camera: jaws in the lower third, open gap centred
-- [ ] Wrist camera: full wrist roll/flex under teleop with no mount shift or cable pull; tighten and mark its position
+- [ ] Secure the wrist camera properly (cable ties for now; screws need washers or a nut), check full wrist roll/flex under teleop for mount shift or cable pull, and mark its position
 - [ ] Scene camera placement before Week 2 recording: ~0.6–0.8 m from the workspace (now ~1.3 m), all 12 block and 4 bowl spots in view; clamp and mark it
 - [x] Time a short SmolVLA fine-tune (~1k steps) on the laptop to size the Week 2 run: 1.71 steps/s at batch 8, 3.5 GB peak VRAM, loss 0.095 → 0.026 on 10 episodes of `lerobot/svla_so101_pickplace` (two cameras via `--rename_map` to `camera1`/`camera2`). ~25k steps ≈ 4 h overnight; try batch 12–16 first; Kaggle/Colab only if Gate 1 needs batch 32–64
 - [ ] Decide depth recording with CV: raw 848×480 depth is ~24 MB/s (~29 GB for 60 demos); record a subset or lower frame rate (disk has ~29 GB free)
@@ -144,6 +144,7 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Joint conversion LeRobot degrees / gripper 0–100 → URDF radians in `kinematics.py`, with a unit test (offsets are zero: the URDF zero is the middle of each calibrated range)
 - [ ] Verify each joint's direction (`JOINT_SIGNS` in `kinematics.py`) on the real arm
 - [ ] FK check: 5 poses, ruler vs. FK (target < 1 cm)
+- [ ] Resolve joint zero offsets: at rest, FK puts the gripper 15 mm into the table (real gap ~20 mm); a homing-pose zero fits that gap; confirm with a per-link level check before the FK check
 - [x] Joint limits in `kinematics.py`; servo datasheet maximum velocity (4.7 rad/s) as the hard limit
 - [ ] Planning velocity limit per joint: 99th-percentile speed from teleop logs (the speeds the policy saw in demos)
 - [x] Fit 5 collision spheres per link (`configs/so101_collision_spheres.yaml`, `scripts/fit_collision_spheres.py`): every mesh surface point covered with ≥ 0.76 mm to spare; spheres claim ~5–13 mm (mean) beyond each link
