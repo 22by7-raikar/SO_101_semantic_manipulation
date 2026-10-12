@@ -135,7 +135,8 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Mount the wrist camera: jaws in the lower third, open gap centred
 - [ ] Wrist camera: full wrist roll/flex under teleop with no mount shift or cable pull; tighten and mark its position
 - [ ] Scene camera placement before Week 2 recording: ~0.6–0.8 m from the workspace (now ~1.3 m), all 12 block and 4 bowl spots in view; clamp and mark it
-- [ ] Time a short SmolVLA fine-tune (~1k steps) on the laptop to size the Week 2 run
+- [x] Time a short SmolVLA fine-tune (~1k steps) on the laptop to size the Week 2 run: 1.71 steps/s at batch 8, 3.5 GB peak VRAM, loss 0.095 → 0.026 on 10 episodes of `lerobot/svla_so101_pickplace` (two cameras via `--rename_map` to `camera1`/`camera2`). ~25k steps ≈ 4 h overnight; try batch 12–16 first; Kaggle/Colab only if Gate 1 needs batch 32–64
+- [ ] Decide depth recording with CV: raw 848×480 depth is ~24 MB/s (~29 GB for 60 demos); record a subset or lower frame rate (disk has ~29 GB free)
 - [ ] (CV) Generate the episode schedule and record the first ~20 demos by Friday
 
 **Robot model (MP)**
