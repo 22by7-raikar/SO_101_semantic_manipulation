@@ -168,7 +168,9 @@ Done when: the QP keeps replayed chunks clear of a test obstacle, and the Clean 
 
 **Distance field (MP)**
 - [ ] Interface with teammate: masked cloud in base frame, N×3 numpy + timestamp (`DistanceField.from_points(..., stamp=)` takes it; agree with CV that arm, target and table are removed)
-- [ ] Workspace box, 1 cm voxels (`cost_field.voxel_size_m`); code done, `cost_field.box_min_m/box_max_m` wait for table z from the touch fit
+- [x] Workspace box, 1 cm voxels (`cost_field.voxel_size_m`): x −0.10…0.50, y ±0.40, z table (−0.0024, base mesh bottom)…0.45 m in `lab.local.yaml`; touch-fit `table_z` cross-checks the bottom; revisit x/y once the stand and leader positions are set
+- [x] Table plane from depth (`geometry.fit_plane`, ~100 ms per 848×480 frame) and `remove_table` (drop points < 1 cm above it); tested on synthetic depth
+- [ ] Once the stand is up: fit the real table plane, check it maps to z = −0.0024 m through `T_base_camera` (tilt < 1°, height < 3 mm)
 - [x] `scipy.ndimage.distance_transform_edt` on occupancy (signed; `distance_field.py`; build 20–60 ms on CPU)
 - [x] Torch trilinear query (`grid_sample`) → differentiable distance + gradient (matches the numpy query; 0.5 ms for 1,750 points with gradient)
 - [x] Test with a box at known points (1–2 cm): 0–3 mm closer than true, never further (synthetic cloud; redo with a real box once T_base_camera exists)
