@@ -120,17 +120,31 @@ camera calibration or planning:
 
 ### Joint offsets and FK check from touch points
 
-Needs one sheet of printer paper, folded in half both ways and taped flat in front of the arm
-(long edge across the front, near edge ~3-5 cm from the base). Its corners, edge midpoints and
-centre are nine marks known to about 1 mm. With teleop stopped (torque off) and the gripper
-closed, rest the point of the fixed jaw on marks by hand and record each touch:
+Print the calibration sheet (`uv run --no-sync python scripts/make_calib_sheet.py` →
+`outputs/calib_sheet_a4.pdf`) at 100% on A4; check its 100 mm bar. Tape it flat in front of the
+arm, N row toward the base, near edge ~3-5 cm from it. (Fallback without a printer: a plain sheet
+folded in half both ways, `--paper a4|letter`.) With teleop stopped (torque off) and the gripper
+closed, rest the point of the fixed jaw on crosshairs by hand and record each touch:
 
 ```bash
-uv run --no-sync python scripts/record_touch_points.py --paper letter   # or a4
-uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json
+uv run --no-sync python scripts/record_touch_points.py
+uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save
 ```
 
 Record 12-18 touches: every reachable mark, several again with the wrist rolled or the arm bent
 differently. The fit reports the current model's error, the best joint directions, per-joint zero
 offsets (degrees added to LeRobot readings) and the per-touch residual, which is the FK check
 (target < 10 mm). Offsets are specific to the current arm calibration: redo after recalibrating.
+
+### Camera-to-base calibration from the same sheet
+
+Leave the sheet taped where it was touched. With the scene camera clamped in its final position
+and at least 3 of the sheet's 4 tags in view:
+
+```bash
+uv run --no-sync python scripts/calibrate_scene_camera.py calibration/local/fk_touch/<file>.fit.json --write
+```
+
+It combines the sheet's pose in the base frame (from the touch fit) with its pose in the camera
+(from the tags) and stores `calibration.T_base_camera` in `lab.local.yaml`. If the camera is
+bumped, put the sheet back on its taped marks and rerun; no new touches needed.

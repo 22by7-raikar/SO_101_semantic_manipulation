@@ -151,12 +151,12 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 - [x] Self-collision checks on the spheres: adjacent pairs skipped, 3 pairs proven unable to touch skipped, 12 pairs checked; never misses a mesh contact
 - [ ] View the spheres in meshcat over the mesh
 
-**Camera-to-base calibration (MP)**
-- [ ] Clamp the RealSense; mark its position
-- [ ] 4–6 cm AprilTag fixed to the gripper
-- [ ] 15–20 poses across the workspace: joint state + tag pose
-- [ ] Solve eye-to-hand with OpenCV's hand-eye solver; store `T_base_camera` (`p_base = T @ p_camera`)
-- [ ] Check FK gripper projected into the image on held-out poses (target 1–2 cm)
+**Camera-to-base calibration (MP)** — printed sheet method (4 AprilTags + 9 touch marks): the touch fit gives the sheet in the base frame, the tags give it in the camera frame
+- [ ] Print `outputs/calib_sheet_a4.pdf` at 100% (check the 100 mm bar); tape it flat in front of the arm, N row toward the base; leave it taped
+- [ ] Touch session (`record_touch_points.py`, then `fk_fit --save`): joint offsets + FK check (see Robot model)
+- [ ] Clamp the RealSense in its final position; mark it
+- [ ] `calibrate_scene_camera.py <fit> --write` → `T_base_camera` in `lab.local.yaml` (`p_base = T @ p_camera`)
+- [ ] Check: FK gripper projected into the image on a few poses off the sheet (target 1–2 cm); optional cross-check with a gripper tag (`make_apriltags.py`) and OpenCV's hand-eye solver
 
 **Literature check (Both, half a day)**
 - [ ] arXiv: inference-time guidance/steering of VLA, flow-matching or diffusion policies; collision-aware action chunking; start with RTC

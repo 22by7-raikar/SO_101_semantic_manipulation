@@ -1,9 +1,10 @@
-"""Record touch points for the joint-offset fit: fixed-jaw tip on marks of a plain paper sheet.
+"""Record touch points for the joint-offset fit: fixed-jaw tip on marks of a sheet on the table.
 
-Setup: one sheet of printer paper folded in half both ways (the creases mark the edge midpoints
-and the centre), taped flat on the table in front of the arm, long edge across the front, its
-near edge ~3-5 cm in front of the base. Nine marks, named looking from behind the robot in the
-direction it faces:
+Default sheet: the printed calibration sheet (scripts/make_calib_sheet.py, A4 landscape), taped
+flat in front of the arm with its N row toward the base. Its nine crosshairs are labelled
+NL..FR. Fallback: a plain sheet folded in half both ways (--paper a4/letter), long edge across the
+front, near edge ~3-5 cm from the base; marks are corners, edge midpoints and centre, named
+looking from behind the robot in the direction it faces:
 
   far row:    FL  FC  FR
   middle row: ML  MC  MR
@@ -14,8 +15,8 @@ the fixed jaw rests on a mark, type the mark's name and press ENTER. Touch every
 least once, and several again with the wrist rolled or the arm bent differently: 12-18 touches.
 Read-only: never writes to the motors.
 
-  uv run --no-sync python scripts/record_touch_points.py --paper letter
-  uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json
+  uv run --no-sync python scripts/record_touch_points.py
+  uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save
 """
 
 import argparse
@@ -25,6 +26,7 @@ import subprocess
 import time
 from pathlib import Path
 
+from so101_semantic import calib_sheet
 from so101_semantic.kinematics import JOINT_NAMES
 from so101_semantic.pose import default_calibration, default_port, open_bus
 
@@ -34,6 +36,8 @@ PAPER_MM = {"letter": (279.4, 215.9), "a4": (297.0, 210.0)}  # long edge, short 
 
 def marks_m(paper: str) -> dict[str, tuple[float, float]]:
     """Mark positions in the sheet frame: x along the near edge from left, y away from the arm."""
+    if paper == "calib":
+        return calib_sheet.marks_m()
     length, width = (v / 1000 for v in PAPER_MM[paper])
     xs = {"L": 0.0, "C": length / 2, "R": length}
     ys = {"N": 0.0, "M": width / 2, "F": width}
@@ -44,7 +48,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("--paper", choices=sorted(PAPER_MM), required=True)
+    parser.add_argument("--paper", choices=["calib", *sorted(PAPER_MM)], default="calib")
     parser.add_argument("--port", default=default_port())
     parser.add_argument("--calibration", type=Path, default=default_calibration())
     args = parser.parse_args()

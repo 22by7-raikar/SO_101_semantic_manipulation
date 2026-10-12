@@ -119,6 +119,7 @@ def load_touches(path: Path) -> tuple[list[dict[str, float]], NDArray]:
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("touch_file", type=Path)
+    parser.add_argument("--save", action="store_true", help="Write <touch_file>.fit.json")
     args = parser.parse_args()
     readings, marks = load_touches(args.touch_file)
     model = SO101Model()
@@ -140,6 +141,14 @@ def main() -> None:
         print(f"  {j:14s} {v:+6.1f}")
     print(f"table z {best['table_z_m'] * 1000:.1f} mm; sheet {best['sheet_pose']}")
     print("per-touch residual (mm):", " ".join(f"{e * 1000:.1f}" for e in best["residual_m"]))
+    if args.save:
+        out = args.touch_file.with_suffix(".fit.json")
+        record = json.loads(args.touch_file.read_text())
+        best = {**best, "touch_file": str(args.touch_file), "paper": record.get("paper")}
+        best["calibration_sha256"] = record.get("calibration_sha256")
+        best["zero_offset_rms_m"] = zero["rms_m"]
+        out.write_text(json.dumps(best, indent=1))
+        print(f"Saved {out}")
 
 
 if __name__ == "__main__":
