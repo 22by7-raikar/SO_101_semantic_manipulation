@@ -1,8 +1,9 @@
 """Record touch points for the joint-offset fit: fixed-jaw tip on marks of a sheet on the table.
 
-Default sheet: the printed calibration sheet (scripts/make_calib_sheet.py, A4 landscape), taped
-flat in front of the arm with its N row toward the base. Its nine crosshairs are labelled
-NL..FR. Fallback: a plain sheet folded in half both ways (--paper a4/letter), long edge across the
+Default sheet: the printed calibration sheet (scripts/make_calib_sheet.py; --paper calib-letter,
+the default, or calib-a4: name the layout you printed), taped flat in front of the arm with its
+N row toward the base. Its nine crosshairs are labelled NL..FR. Fallback: a plain sheet folded in
+half both ways (--paper a4/letter), long edge across the
 front, near edge ~3-5 cm from the base; marks are corners, edge midpoints and centre, named
 looking from behind the robot in the direction it faces:
 
@@ -36,8 +37,8 @@ PAPER_MM = {"letter": (279.4, 215.9), "a4": (297.0, 210.0)}  # long edge, short 
 
 def marks_m(paper: str) -> dict[str, tuple[float, float]]:
     """Mark positions in the sheet frame: x along the near edge from left, y away from the arm."""
-    if paper == "calib":
-        return calib_sheet.marks_m()
+    if paper.startswith("calib-"):
+        return calib_sheet.marks_m(paper.removeprefix("calib-"))
     length, width = (v / 1000 for v in PAPER_MM[paper])
     xs = {"L": 0.0, "C": length / 2, "R": length}
     ys = {"N": 0.0, "M": width / 2, "F": width}
@@ -48,7 +49,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter
     )
-    parser.add_argument("--paper", choices=["calib", *sorted(PAPER_MM)], default="calib")
+    calib = [f"calib-{name}" for name in sorted(calib_sheet.LAYOUTS)]
+    parser.add_argument("--paper", choices=[*calib, *sorted(PAPER_MM)], default="calib-letter")
     parser.add_argument("--port", default=default_port())
     parser.add_argument("--calibration", type=Path, default=default_calibration())
     args = parser.parse_args()

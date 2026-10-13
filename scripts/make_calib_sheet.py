@@ -1,6 +1,8 @@
-"""Write the printable calibration sheet (A4 landscape): four AprilTags and nine touch marks.
+"""Write the printable calibration sheet (landscape): four AprilTags and nine touch marks.
 
-  uv run --no-sync python scripts/make_calib_sheet.py        # -> outputs/calib_sheet_a4.pdf
+  uv run --no-sync python scripts/make_calib_sheet.py               # US Letter (default)
+  uv run --no-sync python scripts/make_calib_sheet.py --paper a4    # A4
+  # -> outputs/calib_sheet_<paper>.pdf
 
 Print at 100% / actual size on matte paper; check the 100 mm scale bar and a tag's 45 mm black
 square. Tape it flat in front of the arm with the N (near) row toward the robot base.
@@ -17,20 +19,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.patches import Circle, Rectangle  # noqa: E402
 
-from so101_semantic.calib_sheet import (  # noqa: E402
-    MARKS_MM,
-    PAGE_MM,
-    TAG_CELLS,
-    TAG_SIZE_MM,
-    TAGS_MM,
-)
+from so101_semantic.calib_sheet import LAYOUTS, TAG_CELLS, TAG_SIZE_MM  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 MM_PER_INCH = 25.4
 
 
-def draw(path: Path, dpi: int | None = None) -> None:
-    w, h = PAGE_MM
+def draw(path: Path, paper: str = "a4", dpi: int | None = None) -> None:
+    layout = LAYOUTS[paper]
+    w, h = layout.page_mm
     fig = plt.figure(figsize=(w / MM_PER_INCH, h / MM_PER_INCH))
     ax = fig.add_axes((0, 0, 1, 1))
     ax.set_xlim(0, w)
@@ -39,7 +36,7 @@ def draw(path: Path, dpi: int | None = None) -> None:
     ax.axis("off")
 
     dictionary = cv2.aruco.getPredefinedDictionary(cv2.aruco.DICT_APRILTAG_36h11)
-    for tag_id, (x, y) in TAGS_MM.items():
+    for tag_id, (x, y) in layout.tags_mm.items():
         image = cv2.aruco.generateImageMarker(dictionary, tag_id, TAG_CELLS * 50, borderBits=1)
         ax.imshow(
             image,
@@ -52,13 +49,14 @@ def draw(path: Path, dpi: int | None = None) -> None:
         label_y = y - 4 if y < h / 2 else y + TAG_SIZE_MM + 2
         ax.text(x + TAG_SIZE_MM / 2, label_y, f"id {tag_id}", ha="center", fontsize=5, color="0.5")
 
-    for label, (x, y) in MARKS_MM.items():
+    for label, (x, y) in layout.marks_mm.items():
         ax.plot([x - 6, x + 6], [y, y], color="k", linewidth=0.5)
         ax.plot([x, x], [y - 6, y + 6], color="k", linewidth=0.5)
         ax.add_patch(Circle((x, y), 2.0, fill=False, edgecolor="k", linewidth=0.5))
         ax.text(x + 4, y + 3, label, fontsize=9, fontweight="bold")
 
-    ax.text(w / 2, h - 8, "SO-101 calibration sheet (A4, print at 100%)", ha="center", fontsize=8)
+    title = f"SO-101 calibration sheet ({'A4' if paper == 'a4' else 'US Letter'}, print at 100%)"
+    ax.text(w / 2, h - 8, title, ha="center", fontsize=8)
     ax.text(
         w / 2,
         h - 14,
@@ -82,9 +80,11 @@ def draw(path: Path, dpi: int | None = None) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--out", type=Path, default=ROOT / "outputs" / "calib_sheet_a4.pdf")
+    parser.add_argument("--paper", choices=sorted(LAYOUTS), default="letter")
+    parser.add_argument("--out", type=Path, help="Default outputs/calib_sheet_<paper>.pdf")
     args = parser.parse_args()
-    draw(args.out)
+    args.out = args.out or ROOT / "outputs" / f"calib_sheet_{args.paper}.pdf"
+    draw(args.out, args.paper)
     print(f"Wrote {args.out}")
 
 

@@ -5,9 +5,12 @@ Run commands from the repo root. New terminals already set `HF_LEROBOT_CALIBRATI
 
 ## 1. Print and place the sheet
 
-1. Print `outputs/calib_sheet_a4.pdf` at **100% / Actual size** (never "Fit to page"), A4, matte.
-   Regenerate it with `uv run --no-sync python scripts/make_calib_sheet.py`.
-2. Measure: the scale bar must be **100 mm**, a tag's black square **45 mm**.
+1. Print `outputs/calib_sheet_letter.pdf` on US Letter (or `calib_sheet_a4.pdf` on A4), matte,
+   at **100% / Actual size**: turn off "Fit to page" and "Shrink oversized pages". Regenerate with
+   `uv run --no-sync python scripts/make_calib_sheet.py [--paper a4]`. An A4 sheet printed on
+   Letter comes out shrunk to ~89% (tags 40 mm): unusable.
+2. Measure along an edge, not the diagonal: the scale bar must be **100 mm (3.94 in)**, a tag's
+   black square **45 mm (1.77 in)**.
 3. Tape it **flat** in front of the follower: **N row toward the base**, near edge **3–5 cm** from
    the base, roughly centred on the direction the arm points when straight.
 4. Tape all 4 corners and **mark the corners on the table**, so the sheet can go back exactly.
@@ -26,7 +29,8 @@ near row:   NL  NC  NR      <- robot base
 1. Stop teleop (torque must be off). Close the gripper; hold or tape it closed.
 2. Start the recorder:
    ```bash
-   uv run --no-sync python scripts/record_touch_points.py
+   uv run --no-sync python scripts/record_touch_points.py                    # Letter sheet
+   uv run --no-sync python scripts/record_touch_points.py --paper calib-a4   # A4 sheet
    ```
 3. For each touch: support the arm, rest the **point of the fixed jaw** (the jaw that does not
    move when the gripper opens) lightly on a crosshair centre, type its name (e.g. `MC`), ENTER.

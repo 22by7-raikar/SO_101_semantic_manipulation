@@ -84,8 +84,10 @@ def main() -> None:
     args = parser.parse_args()
 
     fit = json.loads(args.fit_file.read_text())
-    if fit.get("paper") != "calib":
+    paper = str(fit.get("paper"))
+    if not paper.startswith("calib-"):
         raise SystemExit("The fit must come from touches on the printed calibration sheet")
+    paper = paper.removeprefix("calib-")
     pose = fit["sheet_pose"]
     t_base_sheet = sheet_pose_in_base(pose["x_m"], pose["y_m"], pose["yaw_deg"], fit["table_z_m"])
 
@@ -95,7 +97,7 @@ def main() -> None:
     for image in images:
         detections = detect_sheet(image)
         if len(detections) >= 3:
-            t, rms = sheet_pose_in_camera(detections, kmat)
+            t, rms = sheet_pose_in_camera(detections, kmat, paper=paper)
             poses.append(t)
             errors.append(rms)
             seen |= set(detections)
