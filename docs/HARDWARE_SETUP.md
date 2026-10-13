@@ -130,13 +130,15 @@ closed, rest the point of the fixed jaw on crosshairs by hand and record each to
 
 ```bash
 uv run --no-sync python scripts/record_touch_points.py
-uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save
+uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save --apply
 ```
 
 Record 12-18 touches: every reachable mark, several again with the wrist rolled or the arm bent
 differently. The fit reports the current model's error, the best joint directions, per-joint zero
 offsets (degrees added to LeRobot readings) and the per-touch residual, which is the FK check
-(target < 10 mm). Offsets are specific to the current arm calibration: redo after recalibrating.
+(target < 10 mm). `--apply` installs the result as `configs/joint_calibration.local.yaml`.
+Offsets are specific to the current arm calibration: redo after recalibrating (the loader refuses
+a calibration fitted against a different `follower.json`).
 
 ### Camera-to-base calibration from the same sheet
 

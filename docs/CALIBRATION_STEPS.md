@@ -39,12 +39,15 @@ near row:   NL  NC  NR      <- robot base
 4. Touches (~16): all 9 marks once, then MC with the wrist rolled ~45° each way, NC and FC with the
    elbow bent more, ML / MR / NR with the wrist rolled. Skip marks the arm cannot reach.
    `u` = undo last, `q` = finish. The file is saved after every touch.
-5. Fit and save:
+5. Fit, save and install:
    ```bash
-   uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save
+   uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json --save --apply
    ```
-   Check: residual RMS **< 10 mm**; note the offsets. Applying them in `kinematics.py` is a
-   separate, reviewed step.
+   Check: residual RMS **< 10 mm** (worse fits are refused). This writes
+   `configs/joint_calibration.local.yaml`, used by everything that models the real arm; the
+   previous file is kept as `configs/joint_calibration.<time>.local.yaml`. To swap or roll back:
+   `uv run --no-sync python -m so101_semantic.fk_fit --install <file>.fit.json`.
+   Without `--apply` the fit is only saved, for review first.
 
 **Leave the sheet taped where it is** until step 3 is done.
 
@@ -66,7 +69,7 @@ near row:   NL  NC  NR      <- robot base
 | Change | Redo |
 | --- | --- |
 | Scene camera moved or bumped | Sheet back on its marks → step 3 only |
-| Arm recalibrated (`lerobot-calibrate`) | Steps 2 and 3 |
+| Arm recalibrated (`lerobot-calibrate`) | Steps 2 and 3 (the old joint calibration is refused until then) |
 | Sheet moved before step 3 | Step 2 again (new touches), then step 3 |
 
 ## If something goes wrong

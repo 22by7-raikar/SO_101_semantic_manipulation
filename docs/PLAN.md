@@ -142,9 +142,10 @@ Done when: a teleop episode records with both cameras, FK matches the real gripp
 **Robot model (MP)**
 - [x] Get the SO-101 URDF (TheRobotStudio SO-ARM100 repo), pin its commit, load it with `yourdfpy`
 - [x] Joint conversion LeRobot degrees / gripper 0–100 → URDF radians in `kinematics.py`, with a unit test (offsets are zero: the URDF zero is the middle of each calibrated range)
-- [ ] Verify each joint's direction (`JOINT_SIGNS` in `kinematics.py`) on the real arm
-- [ ] FK check: 5 poses, ruler vs. FK (target < 1 cm)
-- [ ] Resolve joint zero offsets: at rest, FK puts the gripper 15 mm into the table (real gap ~20 mm); a homing-pose zero fits that gap; confirm with a per-link level check before the FK check
+- [x] Joint directions verified on the real arm: all +1 (touch fit; reversed combinations fit at ≥ 56 mm RMS)
+- [x] FK check: 16 touches on the printed sheet, 4.6 mm RMS / 7.2 mm max after offsets (14.8 mm before)
+- [x] Joint zero offsets: lift −3.05°, elbow −7.18°, wrist_flex −3.98°, wrist_roll −77.58° (confirmed by jaw orientation); installed in `configs/joint_calibration.local.yaml`, loaded by `SO101Model.from_config()`, refused if the LeRobot calibration changes
+- [ ] shoulder_pan offset: from the camera calibration (not observable from touches)
 - [x] Joint limits in `kinematics.py`; servo datasheet maximum velocity (4.7 rad/s) as the hard limit
 - [ ] Planning velocity limit per joint: 99th-percentile speed from teleop logs (the speeds the policy saw in demos)
 - [x] Fit 5 collision spheres per link (`configs/so101_collision_spheres.yaml`, `scripts/fit_collision_spheres.py`): every mesh surface point covered with ≥ 0.76 mm to spare; spheres claim ~5–13 mm (mean) beyond each link

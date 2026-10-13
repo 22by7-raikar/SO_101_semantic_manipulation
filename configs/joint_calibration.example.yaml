@@ -1,0 +1,28 @@
+# SO-101 follower joint calibration: q_urdf = sign * radians(lerobot_deg + offset_deg).
+# Copy of the format only. The real file, configs/joint_calibration.local.yaml (gitignored), is
+# written by the touch-point fit (docs/CALIBRATION_STEPS.md):
+#   uv run --no-sync python -m so101_semantic.fk_fit <touches>.json --save --apply
+# and swapped or rolled back with:
+#   uv run --no-sync python -m so101_semantic.fk_fit --install <touches>.fit.json
+# Each install keeps the previous file as joint_calibration.<time>.local.yaml.
+# Loaded by SO101Model.from_config(); without the file every offset is 0 and every sign +1.
+# Valid only with the LeRobot calibration (follower.json) whose sha256 is recorded: after
+# lerobot-calibrate the loader refuses it until the touches are redone.
+source: null
+installed: null
+lerobot_calibration_sha256: null
+fit_rms_mm: null
+fit_max_mm: null
+table_z_mm: null
+offsets_deg:
+  shoulder_pan: 0.0  # not observable from touches; 0 until the camera calibration measures it
+  shoulder_lift: 0.0
+  elbow_flex: 0.0
+  wrist_flex: 0.0
+  wrist_roll: 0.0
+signs:
+  shoulder_pan: 1.0
+  shoulder_lift: 1.0
+  elbow_flex: 1.0
+  wrist_flex: 1.0
+  wrist_roll: 1.0

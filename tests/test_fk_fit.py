@@ -103,3 +103,21 @@ def test_fit_recovers_a_large_wrist_roll_offset(model):
     fit = fit_offsets(model, readings, marks, roll_starts_deg=ROLL_STARTS_DEG)
     assert fit["rms_m"] < 1e-4
     assert fit["offsets_deg"]["wrist_roll"] == pytest.approx(-75.0, abs=0.5)
+
+
+def test_install_writes_a_loadable_calibration_and_keeps_a_backup(tmp_path, model, touches):
+    import json
+
+    from so101_semantic.fk_fit import install_fit
+    from so101_semantic.kinematics import load_joint_calibration
+
+    readings, marks = touches
+    fit = fit_offsets(model, readings, marks)
+    fit_path = tmp_path / "t.fit.json"
+    fit_path.write_text(json.dumps({**fit, "calibration_sha256": None}))
+    out = tmp_path / "joint_calibration.local.yaml"
+    assert install_fit(fit_path, out) is None
+    cal = load_joint_calibration(out)
+    assert cal.offset("elbow_flex") == pytest.approx(TRUE_OFFSETS["elbow_flex"], abs=0.01)
+    backup = install_fit(fit_path, out)
+    assert backup is not None and backup.exists() and backup.name.endswith(".local.yaml")

@@ -4,15 +4,21 @@ import numpy as np
 import pytest
 
 from so101_semantic.kinematics import (
+    ARM_JOINTS,
     JOINT_NAMES,
     SERVO_NO_LOAD_SPEED_RAD_S,
     URDF_PATH,
+    JointCalibration,
     SO101Model,
+    StaleJointCalibration,
+    arm_to_urdf,
     calibrated_range_rad,
     clip_to_limits,
     lerobot_to_urdf,
     limit_violations,
+    load_joint_calibration,
     min_segment_duration,
+    urdf_to_arm,
 )
 
 
@@ -122,3 +128,76 @@ def test_min_segment_duration_set_by_slowest_joint(model):
     q0 = dict.fromkeys(JOINT_NAMES, 0.0)
     q1 = {**q0, "shoulder_pan": 1.0, "elbow_flex": -0.5}
     assert min_segment_duration(q0, q1, limits) == pytest.approx(1.0 / SERVO_NO_LOAD_SPEED_RAD_S)
+
+
+CAL = JointCalibration(
+    {
+        "shoulder_pan": 0.0,
+        "shoulder_lift": -3.0,
+        "elbow_flex": -7.2,
+        "wrist_flex": -4.0,
+        "wrist_roll": -77.6,
+    },
+    {**dict.fromkeys(ARM_JOINTS, 1.0), "wrist_flex": -1.0},
+)
+
+
+def test_joint_calibration_round_trip():
+    readings = {
+        "shoulder_pan": 12.0,
+        "shoulder_lift": -30.0,
+        "elbow_flex": 80.0,
+        "wrist_flex": 5.0,
+        "wrist_roll": 170.0,
+    }
+    q = arm_to_urdf(readings, CAL)
+    assert q["elbow_flex"] == pytest.approx(np.deg2rad(80.0 - 7.2))
+    assert q["wrist_flex"] == pytest.approx(-np.deg2rad(5.0 - 4.0))
+    back = urdf_to_arm(q, CAL)
+    assert back == pytest.approx(readings)
+
+
+def test_model_applies_joint_calibration(model):
+    calibrated = SO101Model(joint_calibration=CAL)
+    readings = {**zero_pose(), "elbow_flex": 20.0}
+    expected = model.fk(lerobot_to_urdf(readings, model.limits("gripper"), CAL))
+    np.testing.assert_allclose(calibrated.fk_lerobot(readings), expected)
+    assert not np.allclose(calibrated.fk_lerobot(readings), model.fk_lerobot(readings))
+
+
+def test_calibrated_limits_shift_with_offsets(tmp_path):
+    path = calibration_file(tmp_path, half_ticks=1000)
+    plain = SO101Model().joint_limits(path)["elbow_flex"]
+    shifted = SO101Model(joint_calibration=CAL).joint_limits(path)["elbow_flex"]
+    assert shifted.lower == pytest.approx(plain.lower - np.deg2rad(7.2))
+
+
+def test_load_joint_calibration(tmp_path):
+    assert load_joint_calibration(tmp_path / "missing.yaml").is_identity
+    follower = tmp_path / "follower.json"
+    follower.write_text("{}")
+    import hashlib
+
+    import yaml
+
+    path = tmp_path / "joint_calibration.local.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "source": "fit.json",
+                "lerobot_calibration_sha256": hashlib.sha256(b"{}").hexdigest(),
+                "offsets_deg": CAL.offsets_deg,
+                "signs": CAL.signs,
+            }
+        )
+    )
+    cal = load_joint_calibration(path, lerobot_calibration=follower)
+    assert cal.offsets_deg == CAL.offsets_deg and cal.source == "fit.json"
+    follower.write_text('{"recalibrated": true}')
+    with pytest.raises(StaleJointCalibration):
+        load_joint_calibration(path, lerobot_calibration=follower)
+
+
+def test_bad_sign_rejected():
+    with pytest.raises(ValueError):
+        JointCalibration(signs={"elbow_flex": 2.0})

@@ -61,7 +61,13 @@ def main() -> None:
     if not args.port:
         raise SystemExit("No follower port; pass --port or set robot.follower_port")
 
-    model = SO101Model()
+    model = SO101Model.from_config(lerobot_calibration=args.calibration)
+    cal = model.joint_calibration
+    print(
+        f"joint calibration: {cal.source}"
+        if not cal.is_identity
+        else "joint calibration: none installed (offsets 0); FK is off by ~15 mm"
+    )
     bus, calibration = open_bus(args.port, args.calibration)
     try:
         stored = bus.read_calibration()

@@ -7,17 +7,29 @@ fitted: it is indistinguishable from the sheet's yaw. The fit residual (tip vs. 
 FK check.
 
   uv run --no-sync python -m so101_semantic.fk_fit calibration/local/fk_touch/<file>.json
+  ... --save            # also write <file>.fit.json (used by calibrate_scene_camera.py)
+  ... --save --apply    # and install it as configs/joint_calibration.local.yaml
+  uv run --no-sync python -m so101_semantic.fk_fit --install <file>.fit.json   # swap/roll back
 """
 
 import argparse
 import itertools
 import json
+import time
 from pathlib import Path
 
 import numpy as np
 from numpy.typing import NDArray
 
-from so101_semantic.kinematics import ARM_JOINTS, JOINT_NAMES, SO101Model
+from so101_semantic.kinematics import (
+    ARM_JOINTS,
+    JOINT_CALIBRATION_PATH,
+    JOINT_NAMES,
+    JOINT_SIGNS,
+    JointCalibration,
+    SO101Model,
+    arm_to_urdf,
+)
 
 # Point of the fixed jaw in the gripper_link frame (m): the lowest mesh vertex along the jaw.
 FIXED_JAW_TIP = np.array([-0.0089, -0.0002, -0.1044])
@@ -31,10 +43,10 @@ def to_urdf(
     readings: dict[str, float], offsets_deg: dict[str, float], signs: dict[str, float]
 ) -> dict[str, float]:
     """LeRobot degrees -> URDF radians with per-joint offset and sign (gripper ignored)."""
-    q = {
-        name: signs.get(name, 1.0) * np.deg2rad(readings[name] + offsets_deg.get(name, 0.0))
-        for name in ARM_JOINTS
-    }
+    cal = JointCalibration(
+        {**dict.fromkeys(ARM_JOINTS, 0.0), **offsets_deg}, {**JOINT_SIGNS, **signs}
+    )
+    q = arm_to_urdf(readings, cal)
     q["gripper"] = 0.0  # the fixed jaw does not depend on the gripper joint
     return q
 
@@ -128,11 +140,73 @@ def load_touches(path: Path) -> tuple[list[dict[str, float]], NDArray]:
     return readings, np.array([t["mark_m"] for t in touches])
 
 
+MAX_INSTALL_RMS_M = 0.010  # a fit worse than the FK-check target is not installed
+
+
+def install_fit(fit_path: Path, out: Path = JOINT_CALIBRATION_PATH) -> Path | None:
+    """Write a saved fit (``<touches>.fit.json``) as the arm's joint calibration.
+
+    An existing file is kept as ``joint_calibration.<time>.local.yaml`` next to it (gitignored);
+    copy it back to roll back. Returns the backup path, if any.
+    """
+    import yaml
+
+    fit = json.loads(Path(fit_path).read_text())
+    if fit["rms_m"] > MAX_INSTALL_RMS_M:
+        raise SystemExit(f"Fit RMS {fit['rms_m'] * 1000:.1f} mm is over 10 mm; not installing")
+    offsets = {j: round(float(fit["offsets_deg"].get(j, 0.0)), 2) for j in ARM_JOINTS}
+    signs = {j: float(fit["signs"].get(j, 1.0)) for j in ARM_JOINTS}
+    JointCalibration(offsets, signs)  # validate
+    backup = None
+    if out.exists():
+        backup = out.with_name(f"joint_calibration.{time.strftime('%Y%m%d_%H%M%S')}.local.yaml")
+        out.rename(backup)
+    header = (
+        "# SO-101 follower joint calibration: q_urdf = sign * radians(lerobot_deg + offset_deg).\n"
+        "# Written by `python -m so101_semantic.fk_fit <touches>.json --save --apply` (or\n"
+        "# `--install <fit>.json`); loaded by SO101Model.from_config(). Valid only with the\n"
+        "# LeRobot calibration whose sha256 is below; redo the touches after lerobot-calibrate.\n"
+        "# shoulder_pan: not observable from touches (same as moving the sheet); 0 until the\n"
+        "# camera calibration measures it.\n"
+    )
+    record = {
+        "source": str(fit_path),
+        "installed": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "lerobot_calibration_sha256": fit.get("calibration_sha256"),
+        "fit_rms_mm": round(fit["rms_m"] * 1000, 2),
+        "fit_max_mm": round(fit["max_m"] * 1000, 2),
+        "table_z_mm": round(fit["table_z_m"] * 1000, 2),
+        "offsets_deg": offsets,
+        "signs": signs,
+    }
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(header + yaml.safe_dump(record, sort_keys=False))
+    return backup
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("touch_file", type=Path)
+    parser = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("touch_file", type=Path, nargs="?")
     parser.add_argument("--save", action="store_true", help="Write <touch_file>.fit.json")
+    parser.add_argument(
+        "--apply",
+        action="store_true",
+        help=f"Also install the fit as {JOINT_CALIBRATION_PATH.name}",
+    )
+    parser.add_argument("--install", type=Path, help="Install a saved .fit.json (no refit)")
     args = parser.parse_args()
+    if args.install:
+        backup = install_fit(args.install)
+        print(f"Installed {args.install} -> {JOINT_CALIBRATION_PATH}")
+        if backup:
+            print(f"Previous calibration kept as {backup}")
+        return
+    if args.touch_file is None:
+        parser.error("touch_file is required unless --install is given")
+    if args.apply:
+        args.save = True
     readings, marks = load_touches(args.touch_file)
     model = SO101Model()
     zero = fit_offsets(model, readings, marks, joints=())
@@ -166,6 +240,11 @@ def main() -> None:
         best["zero_offset_rms_m"] = zero["rms_m"]
         out.write_text(json.dumps(best, indent=1))
         print(f"Saved {out}")
+    if args.apply:
+        backup = install_fit(out)
+        print(f"Installed {out} -> {JOINT_CALIBRATION_PATH}")
+        if backup:
+            print(f"Previous calibration kept as {backup}")
 
 
 if __name__ == "__main__":
