@@ -145,6 +145,7 @@ def main() -> None:
         out = args.touch_file.with_suffix(".fit.json")
         record = json.loads(args.touch_file.read_text())
         best = {**best, "touch_file": str(args.touch_file), "paper": record.get("paper")}
+        best["sheet_scale"] = record.get("sheet_scale", [1.0, 1.0])
         best["calibration_sha256"] = record.get("calibration_sha256")
         best["zero_offset_rms_m"] = zero["rms_m"]
         out.write_text(json.dumps(best, indent=1))

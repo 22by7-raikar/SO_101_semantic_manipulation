@@ -35,10 +35,10 @@ ROOT = Path(__file__).resolve().parents[1]
 PAPER_MM = {"letter": (279.4, 215.9), "a4": (297.0, 210.0)}  # long edge, short edge
 
 
-def marks_m(paper: str) -> dict[str, tuple[float, float]]:
+def marks_m(paper: str, scale=(1.0, 1.0)) -> dict[str, tuple[float, float]]:
     """Mark positions in the sheet frame: x along the near edge from left, y away from the arm."""
     if paper.startswith("calib-"):
-        return calib_sheet.marks_m(paper.removeprefix("calib-"))
+        return calib_sheet.marks_m(paper.removeprefix("calib-"), scale)
     length, width = (v / 1000 for v in PAPER_MM[paper])
     xs = {"L": 0.0, "C": length / 2, "R": length}
     ys = {"N": 0.0, "M": width / 2, "F": width}
@@ -51,13 +51,27 @@ def main() -> None:
     )
     calib = [f"calib-{name}" for name in sorted(calib_sheet.LAYOUTS)]
     parser.add_argument("--paper", choices=[*calib, *sorted(PAPER_MM)], default="calib-letter")
+    parser.add_argument(
+        "--measured-mm",
+        type=float,
+        nargs=2,
+        metavar=("NEAR", "LEFT"),
+        help="Sheet printed with scaling: ruler distances (mm) between the left edges of tags 10 "
+        "and 11, and the bottom edges of tags 10 and 12; the geometry is scaled to match",
+    )
     parser.add_argument("--port", default=default_port())
     parser.add_argument("--calibration", type=Path, default=default_calibration())
     args = parser.parse_args()
     if not args.port:
         raise SystemExit("No follower port; pass --port or set robot.follower_port")
 
-    marks = marks_m(args.paper)
+    scale = (1.0, 1.0)
+    if args.measured_mm:
+        if not args.paper.startswith("calib-"):
+            raise SystemExit("--measured-mm applies to the printed calibration sheet only")
+        scale = calib_sheet.measured_scale(*args.measured_mm, args.paper.removeprefix("calib-"))
+        print(f"Sheet scale x {scale[0]:.4f}, y {scale[1]:.4f}")
+    marks = marks_m(args.paper, scale)
     out_dir = ROOT / "calibration" / "local" / "fk_touch"
     out_dir.mkdir(parents=True, exist_ok=True)
     out = out_dir / f"touch_{time.strftime('%Y%m%d_%H%M%S')}.json"
@@ -66,6 +80,7 @@ def main() -> None:
     ).stdout.strip()
     record = {
         "paper": args.paper,
+        "sheet_scale": list(scale),
         "git_sha": sha,
         "calibration_file": str(args.calibration),
         "calibration_sha256": hashlib.sha256(args.calibration.read_bytes()).hexdigest(),

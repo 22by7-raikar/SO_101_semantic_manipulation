@@ -13,6 +13,7 @@ from so101_semantic.calib_sheet import (
     base_to_camera,
     detect_sheet,
     marks_m,
+    measured_scale,
     sheet_pose_in_base,
     sheet_pose_in_camera,
     tag_corners_m,
@@ -98,3 +99,21 @@ def test_rendered_sheet_detects_with_matching_corners(tmp_path, paper):
         expected = tag_corners_m(tag_id, paper)[:, :2] * px_per_m
         expected[:, 1] = LAYOUTS[paper].page_mm[1] / 1000 * px_per_m - expected[:, 1]  # y down
         assert np.abs(corners - expected).max() < 2.0, tag_id  # pixels (~0.3 mm)
+
+
+def test_scaled_print_round_trip():
+    """A4 shrunk to fit Letter: the pose comes back when the measured scale is used."""
+    scale = measured_scale(222 * 0.889, 135 * 0.887)
+    assert scale == pytest.approx((0.889, 0.887))
+    truth = camera_looking_at_sheet()
+
+    def project_scaled(tag_id):
+        rvec = cv2.Rodrigues(truth[:3, :3])[0]
+        corners = tag_corners_m(tag_id, scale=scale)
+        pts, _ = cv2.projectPoints(corners, rvec, truth[:3, 3], K, np.zeros(5))
+        return pts.reshape(4, 2)
+
+    detections = {i: project_scaled(i) for i in TAGS_MM}
+    estimate, rms = sheet_pose_in_camera(detections, K, scale=scale)
+    np.testing.assert_allclose(estimate, truth, atol=1e-6)
+    assert marks_m(scale=scale)["MC"] == pytest.approx((0.1485 * 0.889, 0.105 * 0.887))

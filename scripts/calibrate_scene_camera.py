@@ -88,6 +88,7 @@ def main() -> None:
     if not paper.startswith("calib-"):
         raise SystemExit("The fit must come from touches on the printed calibration sheet")
     paper = paper.removeprefix("calib-")
+    scale = tuple(fit.get("sheet_scale", (1.0, 1.0)))
     pose = fit["sheet_pose"]
     t_base_sheet = sheet_pose_in_base(pose["x_m"], pose["y_m"], pose["yaw_deg"], fit["table_z_m"])
 
@@ -97,7 +98,7 @@ def main() -> None:
     for image in images:
         detections = detect_sheet(image)
         if len(detections) >= 3:
-            t, rms = sheet_pose_in_camera(detections, kmat, paper=paper)
+            t, rms = sheet_pose_in_camera(detections, kmat, paper=paper, scale=scale)
             poses.append(t)
             errors.append(rms)
             seen |= set(detections)

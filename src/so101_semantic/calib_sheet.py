@@ -53,17 +53,31 @@ TAGS_MM = LAYOUTS["a4"].tags_mm
 MARKS_MM = LAYOUTS["a4"].marks_mm
 
 
-def marks_m(paper: str = "a4") -> dict[str, tuple[float, float]]:
-    return {k: (x / 1000, y / 1000) for k, (x, y) in LAYOUTS[paper].marks_mm.items()}
+# A sheet printed with scaling (e.g. A4 shrunk to fit Letter) keeps the pattern: pass the measured
+# per-axis scale (printed / designed), so every position becomes (sx * x, sy * y).
+Scale = tuple[float, float]
 
 
-def tag_corners_m(tag_id: int, paper: str = "a4") -> NDArray:
+def measured_scale(near_tags_mm: float, left_tags_mm: float, paper: str = "a4") -> Scale:
+    """Scale from two ruler measurements on the print: left edge of tag 10 to left edge of tag 11
+    (along the near row) and bottom edge of tag 10 to bottom edge of tag 12 (up the left side)."""
+    tags = LAYOUTS[paper].tags_mm
+    return (near_tags_mm / (tags[11][0] - tags[10][0]), left_tags_mm / (tags[12][1] - tags[10][1]))
+
+
+def marks_m(paper: str = "a4", scale: Scale = (1.0, 1.0)) -> dict[str, tuple[float, float]]:
+    sx, sy = scale
+    return {k: (sx * x / 1000, sy * y / 1000) for k, (x, y) in LAYOUTS[paper].marks_mm.items()}
+
+
+def tag_corners_m(tag_id: int, paper: str = "a4", scale: Scale = (1.0, 1.0)) -> NDArray:
     """Tag corners in the sheet frame [4, 3], in OpenCV's detection order (as printed): top-left,
     top-right, bottom-right, bottom-left."""
     x, y = LAYOUTS[paper].tags_mm[tag_id]
     s = TAG_SIZE_MM
+    sx, sy = scale
     corners = [(x, y + s), (x + s, y + s), (x + s, y), (x, y)]
-    return np.array([(cx / 1000, cy / 1000, 0.0) for cx, cy in corners])
+    return np.array([(sx * cx / 1000, sy * cy / 1000, 0.0) for cx, cy in corners])
 
 
 def detector():
@@ -91,14 +105,18 @@ def detect_sheet(image: NDArray) -> dict[int, NDArray]:
 
 
 def sheet_pose_in_camera(
-    detections: dict[int, NDArray], k: NDArray, dist: NDArray | None = None, paper: str = "a4"
+    detections: dict[int, NDArray],
+    k: NDArray,
+    dist: NDArray | None = None,
+    paper: str = "a4",
+    scale: Scale = (1.0, 1.0),
 ) -> tuple[NDArray, float]:
     """T_camera_sheet (4x4) from detected tag corners, and the RMS reprojection error (px)."""
     import cv2
 
     if len(detections) < 2:
         raise ValueError(f"Need at least 2 sheet tags, saw {sorted(detections)}")
-    obj = np.vstack([tag_corners_m(i, paper) for i in detections])
+    obj = np.vstack([tag_corners_m(i, paper, scale) for i in detections])
     img = np.vstack([detections[i] for i in detections]).astype(np.float64)
     dist = np.zeros(5) if dist is None else dist
     ok, rvec, tvec = cv2.solvePnP(obj, img, k, dist, flags=cv2.SOLVEPNP_IPPE)

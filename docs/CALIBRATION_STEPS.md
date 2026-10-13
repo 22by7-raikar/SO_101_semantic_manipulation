@@ -8,7 +8,9 @@ Run commands from the repo root. New terminals already set `HF_LEROBOT_CALIBRATI
 1. Print `outputs/calib_sheet_letter.pdf` on US Letter (or `calib_sheet_a4.pdf` on A4), matte,
    at **100% / Actual size**: turn off "Fit to page" and "Shrink oversized pages". Regenerate with
    `uv run --no-sync python scripts/make_calib_sheet.py [--paper a4]`. An A4 sheet printed on
-   Letter comes out shrunk to ~89% (tags 40 mm): unusable.
+   Letter comes out shrunk to ~89% (tags 40 mm). It still works if you measure the scale: the
+   distances between the left edges of tags 10 and 11, and between the bottom edges of tags 10
+   and 12 (mm, to 0.5 mm), passed to the recorder as `--paper calib-a4 --measured-mm NEAR LEFT`.
 2. Measure along an edge, not the diagonal: the scale bar must be **100 mm (3.94 in)**, a tag's
    black square **45 mm (1.77 in)**.
 3. Tape it **flat** in front of the follower: **N row toward the base**, near edge **3–5 cm** from
