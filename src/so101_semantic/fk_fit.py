@@ -22,6 +22,9 @@ from so101_semantic.kinematics import ARM_JOINTS, JOINT_NAMES, SO101Model
 # Point of the fixed jaw in the gripper_link frame (m): the lowest mesh vertex along the jaw.
 FIXED_JAW_TIP = np.array([-0.0089, -0.0002, -0.1044])
 FIT_JOINTS = ("shoulder_lift", "elbow_flex", "wrist_flex", "wrist_roll")
+# wrist_roll turns all the way round, so its calibrated zero can be anywhere (about -75 deg on our
+# follower). Its offset is bounded by +-180 deg and fitted from several starts.
+ROLL_STARTS_DEG = tuple(-157.5 + 45.0 * i for i in range(8))
 
 
 def to_urdf(
@@ -57,11 +60,14 @@ def fit_offsets(
     signs: dict[str, float] | None = None,
     joints: tuple[str, ...] = FIT_JOINTS,
     bound_deg: float = 30.0,
+    roll_starts_deg: tuple[float, ...] = (0.0,),
 ) -> dict:
     """Least-squares fit of joint offsets, sheet pose and table height to touch points.
 
     ``marks_m`` is [n, 2]: each touched mark's position in the sheet frame (metres).
-    Returns offsets (deg), sheet pose, table height and per-touch residuals (m).
+    Offsets are bounded by ``bound_deg``, except wrist_roll (+-180, from each of
+    ``roll_starts_deg``; the best fit wins). Returns offsets (deg), sheet pose, table height and
+    per-touch residuals (m).
     """
     from scipy.optimize import least_squares
 
@@ -79,12 +85,18 @@ def fit_offsets(
         predicted = tips(x)
         return np.concatenate([predicted[:, :2] - marks_xy, predicted[:, 2:] - z0], axis=1).ravel()
 
-    start_tips = tips(np.zeros(len(joints) + 4))
-    yaw0, t0 = _kabsch_2d(marks_m, start_tips[:, :2])
-    x0 = np.concatenate([np.zeros(len(joints)), [yaw0, *t0, start_tips[:, 2].mean()]])
-    lower = np.concatenate([np.full(len(joints), -bound_deg), [-np.inf] * 4])
-    upper = np.concatenate([np.full(len(joints), bound_deg), [np.inf] * 4])
-    fit = least_squares(residuals, x0, bounds=(lower, upper), diff_step=1e-4, x_scale="jac")
+    bounds = np.array([180.0 if j == "wrist_roll" else bound_deg for j in joints])
+    lower = np.concatenate([-bounds, [-np.inf] * 4])
+    upper = np.concatenate([bounds, [np.inf] * 4])
+    fit = None
+    for roll in roll_starts_deg if "wrist_roll" in joints else (0.0,):
+        offsets0 = np.array([roll if j == "wrist_roll" else 0.0 for j in joints])
+        start_tips = tips(np.concatenate([offsets0, np.zeros(4)]))
+        yaw0, t0 = _kabsch_2d(marks_m, start_tips[:, :2])
+        x0 = np.concatenate([offsets0, [yaw0, *t0, start_tips[:, 2].mean()]])
+        trial = least_squares(residuals, x0, bounds=(lower, upper), diff_step=1e-4, x_scale="jac")
+        if fit is None or trial.cost < fit.cost:
+            fit = trial
     per_touch = np.linalg.norm(fit.fun.reshape(-1, 3), axis=1)
     yaw, tx, ty, z0 = fit.x[len(joints) :]
     return {
@@ -131,11 +143,15 @@ def main() -> None:
     mirrored = fit_with_sign_check(model, readings, marks * [-1.0, 1.0])
     if mirrored[0]["rms_m"] < results[0]["rms_m"]:
         print("NOTE: marks fit better mirrored left/right; check which side is L vs R")
-        results = mirrored
+        results, marks = mirrored, marks * [-1.0, 1.0]
     for r in results[:3]:
         signs = " ".join(f"{j}={int(s):+d}" for j, s in r["signs"].items() if j in FIT_JOINTS[:3])
         print(f"signs {signs}: RMS {r['rms_m'] * 1000:.1f} mm, max {r['max_m'] * 1000:.1f} mm")
-    best = results[0]
+    # Refit the best signs with wrist_roll started all round the circle.
+    best = fit_offsets(model, readings, marks, results[0]["signs"], roll_starts_deg=ROLL_STARTS_DEG)
+    print(
+        f"refit, wrist_roll from {len(ROLL_STARTS_DEG)} starts: RMS {best['rms_m'] * 1000:.1f} mm"
+    )
     print("best fit offsets (deg, added to LeRobot readings):")
     for j, v in best["offsets_deg"].items():
         print(f"  {j:14s} {v:+6.1f}")

@@ -2,7 +2,13 @@ import numpy as np
 import pytest
 from scipy.optimize import brentq
 
-from so101_semantic.fk_fit import fit_offsets, fit_with_sign_check, tip_position, to_urdf
+from so101_semantic.fk_fit import (
+    ROLL_STARTS_DEG,
+    fit_offsets,
+    fit_with_sign_check,
+    tip_position,
+    to_urdf,
+)
 from so101_semantic.kinematics import JOINT_NAMES, SO101Model
 
 TRUE_OFFSETS = {"shoulder_lift": 3.9, "elbow_flex": -8.8, "wrist_flex": -6.5, "wrist_roll": 2.0}
@@ -16,6 +22,10 @@ def model():
 
 @pytest.fixture(scope="module")
 def touches(model):
+    return make_touches(model, TRUE_OFFSETS)
+
+
+def make_touches(model, true_offsets):
     """Synthetic touches: random arm poses with the shoulder solved so the true tip is on the
     table; each touch's mark is where the tip lands, expressed in the sheet frame."""
     rot = np.array(
@@ -33,7 +43,7 @@ def touches(model):
         }
 
         def height(lift, pose=pose):
-            q = to_urdf({**pose, "shoulder_lift": lift}, TRUE_OFFSETS, {})
+            q = to_urdf({**pose, "shoulder_lift": lift}, true_offsets, {})
             return tip_position(model, q)[2] - TABLE_Z
 
         grid = np.linspace(-100, 100, 41)
@@ -43,7 +53,7 @@ def touches(model):
             continue
         lift = brentq(height, grid[crossings[0]], grid[crossings[0] + 1], xtol=1e-10)
         r = {**pose, "shoulder_lift": lift}
-        tip = tip_position(model, to_urdf(r, TRUE_OFFSETS, {}))
+        tip = tip_position(model, to_urdf(r, true_offsets, {}))
         if not 0.10 < np.hypot(tip[0] - 0.0388, tip[1]) < 0.35:
             continue
         readings.append(r)
@@ -84,3 +94,12 @@ def test_sign_check_prefers_true_signs(model, touches):
     readings, marks = touches
     best = fit_with_sign_check(model, readings, marks)[0]
     assert all(best["signs"][j] == 1.0 for j in ("shoulder_lift", "elbow_flex", "wrist_flex"))
+
+
+def test_fit_recovers_a_large_wrist_roll_offset(model):
+    """wrist_roll's zero can be far off (about -75 deg on our arm); several starts find it."""
+    truth = {**TRUE_OFFSETS, "wrist_roll": -75.0}
+    readings, marks = make_touches(model, truth)
+    fit = fit_offsets(model, readings, marks, roll_starts_deg=ROLL_STARTS_DEG)
+    assert fit["rms_m"] < 1e-4
+    assert fit["offsets_deg"]["wrist_roll"] == pytest.approx(-75.0, abs=0.5)
